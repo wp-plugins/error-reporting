@@ -1,7 +1,7 @@
 <?php
 /*
 Plugin Name: Error Reporting
-Plugin URI: http://www.mittineague.com/dev/
+Plugin URI: http://www.mittineague.com/dev/er.php
 Description: Logs Errors to file and/or Sends Error Notification emails.
 Version: Beta 0.9.3
 Author: Mittineague
@@ -1105,7 +1105,7 @@ With all the possible option setting configurations, it's impossible to show exa
 	<p>WANTED - Bug Reports<br />
 This plugin has been tested to ensure that representative settings work as expected, but with approximately 4,420 different configurations, who knows? If you find a problem with any please let me know.</p>
 	<p>For more information, the latest version, etc. please visit <a href='http://www.mittineague.com/dev/er.php'>http://www.mittineague.com/dev/er.php</a></p>
-	<p>Questions? For support, please visit <a href='http://www.mittineague.com/forums/viewforum.php?f=30'>http://www.mittineague.com/forums/viewforum.php?f=30</a> (registration required)</p>
+	<p>Questions? For support, please visit <a href='http://www.mittineague.com/forums/viewforum.php?f=30'>http://www.mittineague.com/forums/viewforum.php?f=30</a> (registration required to post)</p>
 	<p>For comments / suggestions, please visit <a href='http://www.mittineague.com/blog/2007/03/error-reporting-plugin/'>http://www.mittineague.com/blog/2007/03/error-reporting-plugin/</a></p>
 	</div>
 <?php

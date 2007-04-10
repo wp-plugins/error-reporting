@@ -14,16 +14,19 @@ Beta 0.9.3 09-Apr-2007
 - added natsort to log file display
 - rearranged page sections
 - minor mark-up and info edits
+
 Beta 0.9.2 30-Mar-2007
 - Security improvements 
 - - made wp-log folders / files not world readable
 - - added nonces to form actions
 - minor GUI changes
 - added error_log to Log block fopen-fwrite fails
+
 Beta 0.9.1 29-Mar-2007
 - fixed buggy conditional generating code block
 - added info re E_RECOVERABLE_ERROR
 - added chmod to fix annoying sporadic permission resets
+
 Beta 0.9.0 28-Mar-2007
 
 == Description ==
@@ -105,7 +108,7 @@ Log Files 		- http://www.mittineague.com/dev/img/er-screenshot-3.jpg
 For more info, please visit
 http://www.mittineague.com/dev/er.php
 
-For support, please visit (registration required)
+For support, please visit (registration required to post)
 http://www.mittineague.com/forums/viewforum.php?f=30
 
 For comments / suggestions, please visit
