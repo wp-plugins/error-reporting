@@ -1365,7 +1365,11 @@ function mitt_err_options($code, $msg, $file, $line, $context)
 			if ( (file_exists($mitt_path_file)) && (!is_readable($mitt_path_file)) )
 				 chmod($mitt_path_file, 0606);
 	
-			if ( $handle = fopen($mitt_path_file, 'a+') )
+			if ( !$handle = fopen($mitt_path_file, 'a+') )
+			{
+						return; // silently fail
+			}
+			else
 			{
 				$fs = filesize($mitt_path_file);
 				$file_data = fread($handle, $fs);
