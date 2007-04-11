@@ -1537,7 +1537,7 @@ function mitt_err_options($code, $msg, $file, $line, $context)
 			wp_mail($to, $subject, $body, $headers);
 		}
 	}
-	if ( function_exists('date_default_timezone_set') ) date_default_timezone_set($serv_tz);
+	if ( (function_exists('date_default_timezone_set')) && ($serv_tz != 'This_option_requires_PHP_ver5+') ) date_default_timezone_set($serv_tz);
 }
 
 function mitt_err_handler()
