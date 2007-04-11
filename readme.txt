@@ -5,7 +5,7 @@ Requires at least: unknown
 Tested up to: 2.1.2
 Stable tag: Trunk
 
-== Licence ==
+== License ==
 Released under the terms of the GNU General Public License.
 
 == Version History ==
