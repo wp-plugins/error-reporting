@@ -3,13 +3,16 @@
 Plugin Name: Error Reporting
 Plugin URI: http://www.mittineague.com/dev/er.php
 Description: Logs Errors to file and/or Sends Error Notification emails.
-Version: Beta 0.9.3
+Version: Beta 0.9.4
 Author: Mittineague
 Author URI: http://www.mittineague.com
 */
 
 /*
 * Change Log
+*
+* ver. Beta 0.9.4 10-Apr-2007
+* - made date_default_timezone_get/set OK for PHP < ver. 5
 *
 * ver. Beta 0.9.3 09-Apr-2007
 * - removed error_log from Log block fopen-fwrite fails
@@ -95,7 +98,14 @@ $mitt_email = array('email_action' => '0',
 
 add_option('mitt_er_email', $mitt_email);
 
-$serv_tz = date_default_timezone_get();
+if ( function_exists('date_default_timezone_get') )
+{
+	$serv_tz = date_default_timezone_get();
+}
+else
+{
+	$serv_tz = 'This_option_requires_PHP_ver5+';
+}
 add_option('mitt_er_tz', $serv_tz);
 
 function mitt_add_er_page()
@@ -317,16 +327,25 @@ function mitt_er_options_page()
 		}
 		$upd_email_opts['email_cont'] = ($upd_email_opts['email_action'] == '1') ? $_POST['mitt_email_cont'] : '';
 
-/* range of 2 to 40 should handle all valid timezone identifiers */
 		$upd_tz_opt = trim($_POST['mitt_er_tz']);
-		$tz_regex = '/^[\w-\/\+]{2,40}$/';
-		if (preg_match($tz_regex, $upd_tz_opt))
+
+		if ( function_exists('date_default_timezone_get') )
 		{
-			$upd_tz_opt = $upd_tz_opt;
+/* range of 2 to 40 should handle all valid timezone identifiers */
+			$tz_regex = '/^[\w-\/\+]{2,40}$/';
+			
+			if ( preg_match($tz_regex, $upd_tz_opt) )
+			{
+				$upd_tz_opt = $upd_tz_opt;
+			}
+			else
+			{
+				$upd_tz_opt = date_default_timezone_get();
+			}
 		}
 		else
 		{
-			$upd_tz_opt = date_default_timezone_get();
+			$upd_tz_opt = 'This_option_requires_PHP_ver5+';
 		}
 
 		if ( ( ( ($upd_log_opts['log_type_mode'] == 'inc' ) || ($upd_log_opts['log_type_mode'] == 'exc' ) ) &&  ( ($upd_log_opts['log_fold_mode'] == 'inc' ) || ($upd_log_opts['log_fold_mode'] == 'exc' ) ) ) && ($upd_log_opts['log_andor'] == '') )
@@ -631,7 +650,7 @@ function mitt_er_options_page()
 	<fieldset class="options"> 
 	<legend>Timezone Option</legend>
 
-	<p>Please see the PHP documentation - Appendix I - at <a href='http://www.php.net/manual/en/timezones.php'>http://www.php.net/manual/en/timezones.php</a> for other timezone identifiers.</p>
+	<p>Please see the PHP documentation - Appendix I - at <a href='http://www.php.net/manual/en/timezones.php'>http://www.php.net/manual/en/timezones.php</a> for other timezone identifiers.<br />*NOTE* This option requires PHP version 5+</p>
 
 	<table width="100%" border="0" cellspacing="0" cellpadding="6">
 	<tr><th width="45%" valign="top" align="right" scope="row">Timezone identifier</th>
@@ -1093,7 +1112,7 @@ Note that there is no repeat error option for Email Error Reporting.<br />
 Because each error will be sent as an individual email, the Context is not as crucial a setting here as it is for the Log options. So once you're sure you have the number of emails being sent under control, you may want to include it if that information will help you.</li>
 
 	<li>Timezone Option<br />
-This value is initially set to the server's timezone and controls what time is used.</li>
+This value is initially set to the server's timezone and controls what time is used.<br />*Note* Requires PHP version 5+</li>
 	</ul>
 	</div>
 
@@ -1143,9 +1162,16 @@ function mitt_err_options($code, $msg, $file, $line, $context)
 	$mitt_email_fold_I = $email_options['email_fold_I'];
 	$mitt_email_cont = $email_options['email_cont'];
 
-	$serv_tz = date_default_timezone_get();
+	if ( function_exists('date_default_timezone_get') )
+	{
+		$serv_tz = date_default_timezone_get();
+	}
+	else
+	{
+		$serv_tz = 'This_option_requires_PHP_ver5+';
+	}
 	$mitt_er_tz =  get_option('mitt_er_tz');
-	if (!empty($mitt_er_tz)) date_default_timezone_set($mitt_er_tz);
+	if ( (!empty($mitt_er_tz)) && ($mitt_er_tz != 'This_option_requires_PHP_ver5+') && (function_exists('date_default_timezone_set')) ) date_default_timezone_set($mitt_er_tz);
 
 	$hr_error = '';
 	switch($code)
@@ -1339,11 +1365,7 @@ function mitt_err_options($code, $msg, $file, $line, $context)
 			if ( (file_exists($mitt_path_file)) && (!is_readable($mitt_path_file)) )
 				 chmod($mitt_path_file, 0606);
 	
-			if (!$handle = fopen($mitt_path_file, 'a+'))
-			{
-				return; // silently fail
-			}
-			else
+			if ( $handle = fopen($mitt_path_file, 'a+') )
 			{
 				$fs = filesize($mitt_path_file);
 				$file_data = fread($handle, $fs);
@@ -1354,10 +1376,10 @@ function mitt_err_options($code, $msg, $file, $line, $context)
 					if ( fwrite($handle, $info) === FALSE )
 						return; // silently fail
 				}
-			chmod($mitt_wp_logfoldername, 0700);
-			chmod($mitt_path_file, 0600);
-			fclose($handle);
-			clearstatcache();
+				chmod($mitt_wp_logfoldername, 0700);
+				chmod($mitt_path_file, 0600);
+				fclose($handle);
+				clearstatcache();
 			}			
 		}
 	}
@@ -1515,7 +1537,7 @@ function mitt_err_options($code, $msg, $file, $line, $context)
 			wp_mail($to, $subject, $body, $headers);
 		}
 	}
-	date_default_timezone_set($serv_tz);
+	if ( function_exists('date_default_timezone_set') ) date_default_timezone_set($serv_tz);
 }
 
 function mitt_err_handler()

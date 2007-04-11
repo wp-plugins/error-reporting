@@ -9,6 +9,9 @@ Stable tag: Trunk
 Released under the terms of the GNU General Public License.
 
 == Version History ==
+Beta 0.9.4 10-Apr-2007
+- made date_default_timezone_get/set OK for PHP < ver. 5
+
 Beta 0.9.3 09-Apr-2007
 - removed error_log from Log block fopen-fwrite fails
 - added natsort to log file display
@@ -67,7 +70,7 @@ Likewise, there may be times when it would be helpful to see that a line of a fi
 Because each error will be sent as an individual email, the Context is not as crucial a setting here as it is for the Log options. So once you're sure you have the number of emails being sent under control, you may want to include it if that information will help you.
 
 Timezone Option
-This value is initially set to the server's timezone and controls what time is used.
+This value is initially set to the server's timezone and controls what time is used. This option requires PHP ver 5+
 
 == Option Settings Logic ==
 Please see er-screenshot-2.jpg or the plugin's ACP page for visual explanation by example.
