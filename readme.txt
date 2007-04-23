@@ -2,35 +2,35 @@
 Contributors: Mittineague
 Tags: error reporting, log errors, email errors
 Requires at least: unknown
-Tested up to: 2.1.2
+Tested up to: 2.1.3
 Stable tag: Trunk
 
 == License ==
 Released under the terms of the GNU General Public License.
 
 == Version History ==
-Beta 0.9.4 10-Apr-2007
-- made date_default_timezone_get/set OK for PHP < ver. 5
+Beta 0.9.4 10-Apr-2007  
+- made date_default_timezone_get/set OK for PHP < ver. 5  
 
-Beta 0.9.3 09-Apr-2007
-- removed error_log from Log block fopen-fwrite fails
-- added natsort to log file display
-- rearranged page sections
-- minor mark-up and info edits
+Beta 0.9.3 09-Apr-2007  
+- removed error_log from Log block fopen-fwrite fails  
+- added natsort to log file display  
+- rearranged page sections  
+- minor mark-up and info edits  
 
-Beta 0.9.2 30-Mar-2007
-- Security improvements 
-- - made wp-log folders / files not world readable
-- - added nonces to form actions
-- minor GUI changes
-- added error_log to Log block fopen-fwrite fails
+Beta 0.9.2 30-Mar-2007  
+- Security improvements  
+- - made wp-log folders / files not world readable  
+- - added nonces to form actions  
+- minor GUI changes  
+- added error_log to Log block fopen-fwrite fails  
 
-Beta 0.9.1 29-Mar-2007
-- fixed buggy conditional generating code block
-- added info re E_RECOVERABLE_ERROR
-- added chmod to fix annoying sporadic permission resets
+Beta 0.9.1 29-Mar-2007  
+- fixed buggy conditional generating code block  
+- added info re E_RECOVERABLE_ERROR  
+- added chmod to fix annoying sporadic permission resets  
 
-Beta 0.9.0 28-Mar-2007
+Beta 0.9.0 28-Mar-2007  
 
 == Description ==
 Logs Errors to files and / or Sends Error Notification emails.
@@ -48,8 +48,8 @@ Be very careful setting these options. You could end up flooding the inbox with 
 Note that the default Email Error Reporting settings are not enabled on install.
 
 Error Types Options
-The Error Reporting plugin can report E-WARNING, E_NOTICE and E_STRICT errors.
-Any E_RECOVERABLE_ERROR, and any "trigger" errors, E_USER_ERROR, E_USER_WARNING, and E_USER_NOTICE, will be reported if the option settings report "other error types" (see the "Option Settings Logic" section).
+The Error Reporting plugin can report E _ WARNING, E _ NOTICE and E _ STRICT errors.
+Any E _ RECOVERABLE_ERROR, and any "trigger" errors, E _ USER_ERROR, E _ USER _ WARNING, and E _ USER_NOTICE, will be reported if the option settings report "other error types" (see the "Option Settings Logic" section).
 If you want to ensure that all error types are reported, check "Yes, All Error Types".
 If you are interested in only certain error types "Include" them.
 Conversely, if you specifically do not want an error type, "Exclude" it.
@@ -73,32 +73,32 @@ Timezone Option
 This value is initially set to the server's timezone and controls what time is used. This option requires PHP ver 5+
 
 == Option Settings Logic ==
-Please see er-screenshot-2.jpg or the plugin's ACP page for visual explanation by example.
+Please see er-screenshot-2.jpg or the plugin's ACP Options page for visual explanation by example.
 
 == Log Files ==
 Provides links to the log files for viewing / saving, and a way to delete them.
 
 == Installation ==
-1. Upload 'errorreporting.php' to the '/wp-content/plugins/' directory
-2. Activate the plugin through the 'Plugins' menu in WordPress
-3. Click the 'Options' admin menu link, and select 'ErrorReporting'
-4. Configure the options
+1. Upload 'errorreporting.php' to the '/wp-content/plugins/' directory  
+2. Activate the plugin through the 'Plugins' menu in WordPress  
+3. Click the 'Options' admin menu link, and select 'ErrorReporting'  
+4. Configure the options  
 
 == Frequently Asked Questions ==
 
 = How should I configure the options for "X" error types and "X" folders? =
 
-There are too many possibilities to show them all in the Option Settings Logic section.
-Hopefully the examples will provide enough insight so that you can figure out what you need for what you want.
-And if you're unsure, Please, Please, Please, experiment with the settings for Log Options, NOT the Email Options. 
-But, that said, if enough people recommend or inquire about a particular configuration, it may just make it in a future version's "Top 4 settings" row. :)
+There are too many possibilities to show them all in the Option Settings Logic section.  
+Hopefully the examples will provide enough insight so that you can figure out what you need for what you want.  
+And if you're unsure, Please, Please, Please, experiment with the settings for Log Options, NOT the Email Options.  
+But, that said, if enough people recommend or inquire about a particular configuration, it may just make it in a future version's "Top 4 settings" row. :)  
 
 = How can I help? =
 
 A rough estimate of all the possible different option configuations, not taking
-into account for different settings producing the same result, is 4,420.
+into account for different settings producing the same result, is 4,420.  
 Needless to say, I have not verified that all of them work correctly. If you
-have trouble with any settings not working as expected, please contact me.
+have trouble with any settings not working as expected, please contact me.  
 
 == Screenshots ==
 Email Options 		- http://www.mittineague.com/dev/img/er-screenshot-1.jpg
@@ -112,7 +112,7 @@ For more info, please visit
 http://www.mittineague.com/dev/er.php
 
 For support, please visit (registration required to post)
-http://www.mittineague.com/forums/viewforum.php?f=30
+http://www.mittineague.com/forums/viewtopic.php?t=100
 
 For comments / suggestions, please visit
 http://www.mittineague.com/blog/2007/03/error-reporting-plugin/
@@ -120,6 +120,6 @@ http://www.mittineague.com/blog/2007/03/error-reporting-plugin/
 ***********************
 ** AN IMPORTANT NOTE **
 ***********************
-It can not be stressed enough. Be VERY CAREFUL with the Email Option Settings.
+It can not be stressed enough. Be VERY CAREFUL with the Email Option Settings.  
 You could end up flooding the inbox with hundreds, and MORE LIKELY THOUSANDS,
 of emails in a relatively short amount of time.
