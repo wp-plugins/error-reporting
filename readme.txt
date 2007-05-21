@@ -2,7 +2,7 @@
 Contributors: Mittineague
 Tags: error reporting, log errors, email errors
 Requires at least: unknown
-Tested up to: 2.1.3
+Tested up to: 2.2
 Stable tag: Trunk
 
 == License ==
