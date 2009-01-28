@@ -17,10 +17,10 @@ Beta 0.9.5 27-Jan-2009
 - added javascript select/deselect all  
 
 Beta 0.9.4 10-Apr-2007  
-- made date_default_timezone_get/set OK for PHP < ver. 5  
+- made date_ default_ timezone_ get/set OK for PHP < ver. 5  
 
 Beta 0.9.3 09-Apr-2007  
-- removed error_log from Log block fopen-fwrite fails  
+- removed error_ log from Log block fopen-fwrite fails  
 - added natsort to log file display  
 - rearranged page sections  
 - minor mark-up and info edits  
@@ -30,11 +30,11 @@ Beta 0.9.2 30-Mar-2007
 - - made wp-log folders / files not world readable  
 - - added nonces to form actions  
 - minor GUI changes  
-- added error_log to Log block fopen-fwrite fails  
+- added error_ log to Log block fopen-fwrite fails  
 
 Beta 0.9.1 29-Mar-2007  
 - fixed buggy conditional generating code block  
-- added info re E_RECOVERABLE_ERROR  
+- added info re E_ RECOVERABLE_ ERROR  
 - added chmod to fix annoying sporadic permission resets  
 
 Beta 0.9.0 28-Mar-2007  
@@ -55,8 +55,8 @@ Be very careful setting these options. You could end up flooding the inbox with 
 Note that the default Email Error Reporting settings are not enabled on install.
 
 Error Types Options
-The Error Reporting plugin can report E _ WARNING, E _ NOTICE and E _ STRICT errors.
-Any E _ RECOVERABLE_ERROR, and any "trigger" errors, E _ USER_ERROR, E _ USER _ WARNING, and E _ USER_NOTICE, will be reported if the option settings report "other error types" (see the "Option Settings Logic" section).
+The Error Reporting plugin can report E_ WARNING, E_ NOTICE and E_ STRICT errors.
+Any E_ RECOVERABLE_ ERROR, and any "trigger" errors, E_ USER_ERROR, E_ USER_ WARNING, and E_ USER_ NOTICE, will be reported if the option settings report "other error types" (see the "Option Settings Logic" section).
 If you want to ensure that all error types are reported, check "Yes, All Error Types".
 If you are interested in only certain error types "Include" them.
 Conversely, if you specifically do not want an error type, "Exclude" it.
