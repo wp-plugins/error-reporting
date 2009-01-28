@@ -3,13 +3,20 @@
 Plugin Name: Error Reporting
 Plugin URI: http://www.mittineague.com/dev/er.php
 Description: Logs Errors to file and/or Sends Error Notification emails.
-Version: Beta 0.9.4
+Version: Beta 0.9.5
 Author: Mittineague
 Author URI: http://www.mittineague.com
 */
 
 /*
 * Change Log
+* 
+* ver. Beta 0.9.5 27-Jan-2009
+* - changed mktime() to time()
+* - "info" link fix
+* - replaced "short tags"
+* - changed 'wp'logs to 'er'logs
+* - added javascript select/deselect all
 *
 * ver. Beta 0.9.4 10-Apr-2007
 * - made date_default_timezone_get/set OK for PHP < ver. 5
@@ -79,7 +86,7 @@ $mitt_log = array('log_action' => '1',
 		'log_rpt' => '0',
 		);
 
-add_option('mitt_er_log', $mitt_log);
+add_option('mitt_er_log', $mitt_log, 'Error Reporting');
 
 /* default Email Error Reporting options NOT set on install */
 $mitt_email = array('email_action' => '0',
@@ -96,7 +103,7 @@ $mitt_email = array('email_action' => '0',
 		'email_cont' => '',
 		);
 
-add_option('mitt_er_email', $mitt_email);
+add_option('mitt_er_email', $mitt_email, 'Error Reporting');
 
 if ( function_exists('date_default_timezone_get') )
 {
@@ -106,7 +113,7 @@ else
 {
 	$serv_tz = 'This_option_requires_PHP_ver5+';
 }
-add_option('mitt_er_tz', $serv_tz);
+add_option('mitt_er_tz', $serv_tz, 'Error Reporting');
 
 function mitt_add_er_page()
 {
@@ -382,7 +389,7 @@ function mitt_er_options_page()
 * this somewhat over-restrictive regex ensures that no malicious POST
 * requests will be able to delete files other than log files.
 */
-			$guardian = '/^[\.]{1,2}\/wp-logs\/WP-[0-3][0-9]-[ADFJMNOS][abceglnoprtuvy]{2}-20[0-9]{2}\.log$/';
+			$guardian = '/^[\.]{1,2}\/er-logs\/ER-[0-3][0-9]-[ADFJMNOS][abceglnoprtuvy]{2}-20[0-9]{2}\.log$/';
 			foreach($prune_arr as $prunefile)
 			{
 				if(preg_match($guardian, $prunefile))
@@ -404,14 +411,14 @@ function mitt_er_options_page()
 		check_admin_referer('error-reporting-toggle-permissions_' . $ernonce);
 		if( ($_POST['mitt_perms'] == 'secure') || ($_POST['mitt_perms'] == '') )
 		{
-			$main_dir = "../wp-logs";
+			$main_dir = "../er-logs";
 			if (is_dir($main_dir))
 			{
 				chmod($main_dir, 0705);
 				exec("chmod 604 " . $main_dir . '/*.log');
 			}
 
-			$admin_dir = "./wp-logs";
+			$admin_dir = "./er-logs";
 			if (is_dir($admin_dir))
 			{
 				chmod($admin_dir, 0705);
@@ -422,14 +429,14 @@ function mitt_er_options_page()
 		}
 		else
 		{
-			$main_dir = "../wp-logs";
+			$main_dir = "../er-logs";
 			if (is_dir($main_dir))
 			{
 				exec("chmod 600 " . $main_dir . '/*.log');
 				chmod($main_dir, 0700);
 			}			
 
-			$admin_dir = "./wp-logs";
+			$admin_dir = "./er-logs";
 			if (is_dir($admin_dir))
 			{
 				exec("chmod 600 " . $admin_dir . '/*.log');
@@ -504,8 +511,8 @@ function mitt_er_options_page()
 	if ( function_exists('wp_nonce_field') )
 		wp_nonce_field('error-reporting-delete-log-files_' . $ernonce);
 
-	echo "Log Files in /wp-logs folder:<br />";
-	$main_dir = "../wp-logs";
+	echo "Log Files in /er-logs folder:<br />";
+	$main_dir = "../er-logs";
 	$logfiles_arr = array();
 	if (is_dir($main_dir))
 	{
@@ -524,16 +531,16 @@ function mitt_er_options_page()
 	natsort($logfiles_arr);
 	foreach($logfiles_arr as $logfile)
 	{
-		echo "<input name='prune_logs[]' type='checkbox' value='../wp-logs/" . $logfile . "' />&nbsp;&nbsp;&nbsp;&nbsp;";
-		echo "<a href='../wp-logs/" . $logfile . "'>" . $logfile . "</a> (" . number_format(filesize('../wp-logs/' . $logfile)) . " bytes)<br />";
+		echo "<input name='prune_logs[]' type='checkbox' value='../er-logs/" . $logfile . "' />&nbsp;&nbsp;&nbsp;&nbsp;";
+		echo "<a href='../er-logs/" . $logfile . "'>" . $logfile . "</a> (" . number_format(filesize('../er-logs/' . $logfile)) . " bytes)<br />";
 	}
 	if(empty($logfiles_arr))
 	{
 		echo "No Log files in folder<br />";
 	}
 
-	echo "<br />Log Files in /wp-admin/wp-logs folder:<br />";
-	$admin_dir = "./wp-logs";
+	echo "<br />Log Files in /wp-admin/er-logs folder:<br />";
+	$admin_dir = "./er-logs";
 	$logfiles_arr2 = array();
 	if (is_dir($admin_dir))
 	{
@@ -552,8 +559,8 @@ function mitt_er_options_page()
 	natsort($logfiles_arr2);
 	foreach($logfiles_arr2 as $logfile2)
 	{
-		echo "<input name='prune_logs[]' type='checkbox' value='./wp-logs/" . $logfile2 . "' />&nbsp;&nbsp;&nbsp;&nbsp;";
-		echo "<a href='./wp-logs/" . $logfile2 . "'>" . $logfile2 . "</a> (" . number_format(filesize('./wp-logs/' . $logfile2)) . " bytes)<br />";
+		echo "<input name='prune_logs[]' type='checkbox' value='./er-logs/" . $logfile2 . "' />&nbsp;&nbsp;&nbsp;&nbsp;";
+		echo "<a href='./er-logs/" . $logfile2 . "'>" . $logfile2 . "</a> (" . number_format(filesize('./er-logs/' . $logfile2)) . " bytes)<br />";
 	}
 	if(empty($logfiles_arr2))
 	{
@@ -561,6 +568,22 @@ function mitt_er_options_page()
 	}
 	clearstatcache();
 ?>
+<!-- javascript select all modified from wp-db-backup 2.1.5 plugin by Austin Matzko http://www.ilfilosofo.com/blog/ -->
+			<script type="text/javascript">
+			//<![CDATA[
+				var selectAllLogs = function() {};
+				(function(b){
+					var n = function(c) {
+						var p = document.getElementsByTagName("input");
+						for(var i=0; i<p.length; i++)
+							if( 'prune_logs[]' == p[i].getAttribute('name') ) p[i].checked = c;
+					}
+					b.a = function() { n(true) }
+					b.n = function() { n(false) }
+					document.write('<p><a href="javascript:void(0)" onclick="selectAllLogs.a()">Select all</a> / <a href="javascript:void(0)" onclick="selectAllLogs.n()">Deselect all</a></p>');
+				})(selectAllLogs)
+			//]]>
+			</script>
 	<div class="submit">
 		<input type="submit" name="delete_log_files" value="Delete selected Log files" />
 	</div>
@@ -582,65 +605,65 @@ function mitt_er_options_page()
 
 	<table width="100%" border="0" cellspacing="0" cellpadding="6">
 	<tr><th width="45%" valign="top" align="right" scope="row">Log Errors?</th><td valign="top">
-      	<input name="mitt_log_action" type="radio" value='1' <? if ($mitt_log_action == '1') {echo 'checked="checked"';} ?> /> Yes, Log Errors
+      	<input name="mitt_log_action" type="radio" value='1' <?php if ($mitt_log_action == '1') {echo 'checked="checked"';} ?> /> Yes, Log Errors
 	</td><td valign="top">
-      	<input name="mitt_log_action" type="radio" value='0' <? if ($mitt_log_action == '0') {echo 'checked="checked"';} ?> /> No, Don't Log Errors
+      	<input name="mitt_log_action" type="radio" value='0' <?php if ($mitt_log_action == '0') {echo 'checked="checked"';} ?> /> No, Don't Log Errors
 	</td></tr>
 	</table>
 
 	<table width="100%" border="0" cellspacing="0" cellpadding="6">
 	<tr><th width="45%" valign="top" align="right" scope="row">Include All Error Types?</th><td valign="top">
-      	<input name="mitt_log_type_mode" type="radio" value='all' <? if ($mitt_log_type_mode == 'all') {echo 'checked="checked"';} ?> /> Yes, All Error Types
+      	<input name="mitt_log_type_mode" type="radio" value='all' <?php if ($mitt_log_type_mode == 'all') {echo 'checked="checked"';} ?> /> Yes, All Error Types
 	</td><td valign="top">
-      	<input name="mitt_log_type_mode" type="radio" value='inc' <? if ($mitt_log_type_mode == 'inc') {echo 'checked="checked"';} ?> /> No, Only Include the Error Types indicated below
+      	<input name="mitt_log_type_mode" type="radio" value='inc' <?php if ($mitt_log_type_mode == 'inc') {echo 'checked="checked"';} ?> /> No, Only Include the Error Types indicated below
 	</td><td valign="top">
-      	<input name="mitt_log_type_mode" type="radio" value='exc' <? if ($mitt_log_type_mode == 'exc') {echo 'checked="checked"';} ?> /> No, Exclude the Error Types indicated below
+      	<input name="mitt_log_type_mode" type="radio" value='exc' <?php if ($mitt_log_type_mode == 'exc') {echo 'checked="checked"';} ?> /> No, Exclude the Error Types indicated below
 	</td></tr>
 
 	<tr><th width="45%" valign="top" align="right" scope="row">Error Types:</th><td valign="top">
-      	<input name="mitt_log_type_W" type="checkbox" value='1' <? if ($mitt_log_type_W == '1') {echo 'checked="checked"';} ?> /> E_WARNING</td><td valign="top">
-      	<input name="mitt_log_type_N" type="checkbox" value='1' <? if ($mitt_log_type_N == '1') {echo 'checked="checked"';} ?> /> E_NOTICE</td><td valign="top">
-      	<input name="mitt_log_type_S" type="checkbox" value='1' <? if ($mitt_log_type_S == '1') {echo 'checked="checked"';} ?> /> E_STRICT
+      	<input name="mitt_log_type_W" type="checkbox" value='1' <?php if ($mitt_log_type_W == '1') {echo 'checked="checked"';} ?> /> E_WARNING</td><td valign="top">
+      	<input name="mitt_log_type_N" type="checkbox" value='1' <?php if ($mitt_log_type_N == '1') {echo 'checked="checked"';} ?> /> E_NOTICE</td><td valign="top">
+      	<input name="mitt_log_type_S" type="checkbox" value='1' <?php if ($mitt_log_type_S == '1') {echo 'checked="checked"';} ?> /> E_STRICT
 	</td></tr>
 	</table>
 
 	<table width="100%" border="0" cellspacing="0" cellpadding="6">
 	<tr><th width="45%" valign="top" align="right" scope="row">And or Or?</th><td valign="top">
-      	<input name="mitt_log_andor" type="radio" value='and' <? if ($mitt_log_andor == 'and') {echo 'checked="checked"';} ?> /> AND &#38;&#38;
+      	<input name="mitt_log_andor" type="radio" value='and' <?php if ($mitt_log_andor == 'and') {echo 'checked="checked"';} ?> /> AND &#38;&#38;
 	</td><td valign="top">
-      	<input name="mitt_log_andor" type="radio" value='or' <? if ($mitt_log_andor == 'or') {echo 'checked="checked"';} ?> /> OR ||
+      	<input name="mitt_log_andor" type="radio" value='or' <?php if ($mitt_log_andor == 'or') {echo 'checked="checked"';} ?> /> OR ||
 	</td></tr>
 	</table>
 
 	<table width="100%" border="0" cellspacing="0" cellpadding="6">
 	<tr><th width="45%" valign="top" align="right" scope="row">Include All Folders?</th><td valign="top">
-      	<input name="mitt_log_fold_mode" type="radio" value='all' <? if ($mitt_log_fold_mode == 'all') {echo 'checked="checked"';} ?> /> Yes, All Folders
+      	<input name="mitt_log_fold_mode" type="radio" value='all' <?php if ($mitt_log_fold_mode == 'all') {echo 'checked="checked"';} ?> /> Yes, All Folders
 	</td><td valign="top">
-      	<input name="mitt_log_fold_mode" type="radio" value='inc' <? if ($mitt_log_fold_mode == 'inc') {echo 'checked="checked"';} ?> /> No, Only Include the Folders indicated below
+      	<input name="mitt_log_fold_mode" type="radio" value='inc' <?php if ($mitt_log_fold_mode == 'inc') {echo 'checked="checked"';} ?> /> No, Only Include the Folders indicated below
 	</td><td valign="top">
-      	<input name="mitt_log_fold_mode" type="radio" value='exc' <? if ($mitt_log_fold_mode == 'exc') {echo 'checked="checked"';} ?> /> No, Exclude the Folders indicated below
+      	<input name="mitt_log_fold_mode" type="radio" value='exc' <?php if ($mitt_log_fold_mode == 'exc') {echo 'checked="checked"';} ?> /> No, Exclude the Folders indicated below
 	</td><td>
 	</td></tr>
 
 	<tr><th width="45%" valign="top" align="right" scope="row">Folders:</th><td valign="top">
-      	<input name="mitt_log_fold_A" type="checkbox" value='1' <? if ($mitt_log_fold_A == '1') {echo 'checked="checked"';} ?> /> wp-admin</td><td valign="top">
-      	<input name="mitt_log_fold_C" type="checkbox" value='1' <? if ($mitt_log_fold_C == '1') {echo 'checked="checked"';} ?> /> wp-content</td><td valign="top">
-      	<input name="mitt_log_fold_P" type="checkbox" value='1' <? if ($mitt_log_fold_P == '1') {echo 'checked="checked"';} ?> /> plugins</td><td valign="top">
-      	<input name="mitt_log_fold_I" type="checkbox" value='1' <? if ($mitt_log_fold_I == '1') {echo 'checked="checked"';} ?> /> wp-includes
+      	<input name="mitt_log_fold_A" type="checkbox" value='1' <?php if ($mitt_log_fold_A == '1') {echo 'checked="checked"';} ?> /> wp-admin</td><td valign="top">
+      	<input name="mitt_log_fold_C" type="checkbox" value='1' <?php if ($mitt_log_fold_C == '1') {echo 'checked="checked"';} ?> /> wp-content</td><td valign="top">
+      	<input name="mitt_log_fold_P" type="checkbox" value='1' <?php if ($mitt_log_fold_P == '1') {echo 'checked="checked"';} ?> /> plugins</td><td valign="top">
+      	<input name="mitt_log_fold_I" type="checkbox" value='1' <?php if ($mitt_log_fold_I == '1') {echo 'checked="checked"';} ?> /> wp-includes
 	</td></tr>
 	</table>
 
 	<table width="100%" border="0" cellspacing="0" cellpadding="6">
 	<tr><th width="45%" valign="top" align="right" scope="row">Include Context?</th><td valign="top" colspan="2">
-      	<input name="mitt_log_cont" type="radio" value='1' <? if ($mitt_log_cont == '1') {echo 'checked="checked"';} ?> /> Yes, include context
+      	<input name="mitt_log_cont" type="radio" value='1' <?php if ($mitt_log_cont == '1') {echo 'checked="checked"';} ?> /> Yes, include context
 	</td><td valign="top" colspan="2">
-      	<input name="mitt_log_cont" type="radio" value='0' <? if ($mitt_log_cont == '0') {echo 'checked="checked"';} ?> /> No, Don't include context
+      	<input name="mitt_log_cont" type="radio" value='0' <?php if ($mitt_log_cont == '0') {echo 'checked="checked"';} ?> /> No, Don't include context
 	</td></tr>
 
 	<tr><th width="45%" valign="top" align="right" scope="row">Log Repeat Errors?</th><td valign="top" colspan="2">
-      	<input name="mitt_log_rpt" type="radio" value='1' <? if ($mitt_log_rpt == '1') {echo 'checked="checked"';} ?> /> Yes, Log repeat errors
+      	<input name="mitt_log_rpt" type="radio" value='1' <?php if ($mitt_log_rpt == '1') {echo 'checked="checked"';} ?> /> Yes, Log repeat errors
 	</td><td valign="top" colspan="2">
-      	<input name="mitt_log_rpt" type="radio" value='0' <? if ($mitt_log_rpt == '0') {echo 'checked="checked"';} ?> /> No, Don't Log repeat errors
+      	<input name="mitt_log_rpt" type="radio" value='0' <?php if ($mitt_log_rpt == '0') {echo 'checked="checked"';} ?> /> No, Don't Log repeat errors
 	</td></tr>
 
 	</table>
@@ -668,59 +691,59 @@ function mitt_er_options_page()
 
 	<table width="100%" border="0" cellspacing="0" cellpadding="6">
 	<tr><th width="45%" valign="top" align="right" scope="row">Email Errors?</th><td valign="top">
-      	<input name="mitt_email_action" type="radio" value='1' <? if ($mitt_email_action == '1') {echo 'checked="checked"';} ?> /> Yes, Email Errors
+      	<input name="mitt_email_action" type="radio" value='1' <?php if ($mitt_email_action == '1') {echo 'checked="checked"';} ?> /> Yes, Email Errors
 	</td><td valign="top">
-      	<input name="mitt_email_action" type="radio" value='0' <? if ($mitt_email_action == '0') {echo 'checked="checked"';} ?> /> No, Don't Email Errors
+      	<input name="mitt_email_action" type="radio" value='0' <?php if ($mitt_email_action == '0') {echo 'checked="checked"';} ?> /> No, Don't Email Errors
 	</td></tr>
 	</table>
 
 	<table width="100%" border="0" cellspacing="0" cellpadding="6">
 	<tr><th width="45%" valign="top" align="right" scope="row">Include All Error Types?</th><td valign="top">
-      	<input name="mitt_email_type_mode" type="radio" value='all' <? if ($mitt_email_type_mode == 'all') {echo 'checked="checked"';} ?> /> Yes, All Error Types
+      	<input name="mitt_email_type_mode" type="radio" value='all' <?php if ($mitt_email_type_mode == 'all') {echo 'checked="checked"';} ?> /> Yes, All Error Types
 	</td><td valign="top">
-      	<input name="mitt_email_type_mode" type="radio" value='inc' <? if ($mitt_email_type_mode == 'inc') {echo 'checked="checked"';} ?> /> No, Only Include the Error Types indicated below
+      	<input name="mitt_email_type_mode" type="radio" value='inc' <?php if ($mitt_email_type_mode == 'inc') {echo 'checked="checked"';} ?> /> No, Only Include the Error Types indicated below
 	</td><td valign="top">
-      	<input name="mitt_email_type_mode" type="radio" value='exc' <? if ($mitt_email_type_mode == 'exc') {echo 'checked="checked"';} ?> /> No, Exclude the Error Types indicated below
+      	<input name="mitt_email_type_mode" type="radio" value='exc' <?php if ($mitt_email_type_mode == 'exc') {echo 'checked="checked"';} ?> /> No, Exclude the Error Types indicated below
 	</td></tr>
 
 	<tr><th width="45%" valign="top" align="right" scope="row">Error Types:</th><td valign="top">
-      	<input name="mitt_email_type_W" type="checkbox" value='1' <? if ($mitt_email_type_W == '1') {echo 'checked="checked"';} ?> /> E_WARNING</td><td valign="top">
-      	<input name="mitt_email_type_N" type="checkbox" value='1' <? if ($mitt_email_type_N == '1') {echo 'checked="checked"';} ?> /> E_NOTICE</td><td valign="top">
-      	<input name="mitt_email_type_S" type="checkbox" value='1' <? if ($mitt_email_type_S == '1') {echo 'checked="checked"';} ?> /> E_STRICT
+      	<input name="mitt_email_type_W" type="checkbox" value='1' <?php if ($mitt_email_type_W == '1') {echo 'checked="checked"';} ?> /> E_WARNING</td><td valign="top">
+      	<input name="mitt_email_type_N" type="checkbox" value='1' <?php if ($mitt_email_type_N == '1') {echo 'checked="checked"';} ?> /> E_NOTICE</td><td valign="top">
+      	<input name="mitt_email_type_S" type="checkbox" value='1' <?php if ($mitt_email_type_S == '1') {echo 'checked="checked"';} ?> /> E_STRICT
 	</td></tr>
 	</table>
 
 	<table width="100%" border="0" cellspacing="0" cellpadding="6">
 	<tr><th width="45%" valign="top" align="right" scope="row">And or Or?</th><td valign="top">
-      	<input name="mitt_email_andor" type="radio" value='and' <? if ($mitt_email_andor == 'and') {echo 'checked="checked"';} ?> /> AND &#38;&#38;
+      	<input name="mitt_email_andor" type="radio" value='and' <?php if ($mitt_email_andor == 'and') {echo 'checked="checked"';} ?> /> AND &#38;&#38;
 	</td><td valign="top">
-      	<input name="mitt_email_andor" type="radio" value='or' <? if ($mitt_email_andor == 'or') {echo 'checked="checked"';} ?> /> OR ||
+      	<input name="mitt_email_andor" type="radio" value='or' <?php if ($mitt_email_andor == 'or') {echo 'checked="checked"';} ?> /> OR ||
 	</td></tr>
 	</table>
 
 	<table width="100%" border="0" cellspacing="0" cellpadding="6">
 	<tr><th width="45%" valign="top" align="right" scope="row">Include All Folders?</th><td valign="top">
-      	<input name="mitt_email_fold_mode" type="radio" value='all' <? if ($mitt_email_fold_mode == 'all') {echo 'checked="checked"';} ?> /> Yes, All Folders
+      	<input name="mitt_email_fold_mode" type="radio" value='all' <?php if ($mitt_email_fold_mode == 'all') {echo 'checked="checked"';} ?> /> Yes, All Folders
 	</td><td valign="top">
-      	<input name="mitt_email_fold_mode" type="radio" value='inc' <? if ($mitt_email_fold_mode == 'inc') {echo 'checked="checked"';} ?> /> No, Only Include the Folders indicated below
+      	<input name="mitt_email_fold_mode" type="radio" value='inc' <?php if ($mitt_email_fold_mode == 'inc') {echo 'checked="checked"';} ?> /> No, Only Include the Folders indicated below
 	</td><td valign="top">
-      	<input name="mitt_email_fold_mode" type="radio" value='exc' <? if ($mitt_email_fold_mode == 'exc') {echo 'checked="checked"';} ?> /> No, Exclude the Folders indicated below
+      	<input name="mitt_email_fold_mode" type="radio" value='exc' <?php if ($mitt_email_fold_mode == 'exc') {echo 'checked="checked"';} ?> /> No, Exclude the Folders indicated below
 	</td><td>
 	</td></tr>
 
 	<tr><th width="45%" valign="top" align="right" scope="row">Folders:</th><td valign="top">
-      	<input name="mitt_email_fold_A" type="checkbox" value='1' <? if ($mitt_email_fold_A == '1') {echo 'checked="checked"';} ?> /> wp-admin</td><td valign="top">
-      	<input name="mitt_email_fold_C" type="checkbox" value='1' <? if ($mitt_email_fold_C == '1') {echo 'checked="checked"';} ?> /> wp-content</td><td valign="top">
-      	<input name="mitt_email_fold_P" type="checkbox" value='1' <? if ($mitt_email_fold_P == '1') {echo 'checked="checked"';} ?> /> plugins</td><td valign="top">
-      	<input name="mitt_email_fold_I" type="checkbox" value='1' <? if ($mitt_email_fold_I == '1') {echo 'checked="checked"';} ?> /> wp-includes
+      	<input name="mitt_email_fold_A" type="checkbox" value='1' <?php if ($mitt_email_fold_A == '1') {echo 'checked="checked"';} ?> /> wp-admin</td><td valign="top">
+      	<input name="mitt_email_fold_C" type="checkbox" value='1' <?php if ($mitt_email_fold_C == '1') {echo 'checked="checked"';} ?> /> wp-content</td><td valign="top">
+      	<input name="mitt_email_fold_P" type="checkbox" value='1' <?php if ($mitt_email_fold_P == '1') {echo 'checked="checked"';} ?> /> plugins</td><td valign="top">
+      	<input name="mitt_email_fold_I" type="checkbox" value='1' <?php if ($mitt_email_fold_I == '1') {echo 'checked="checked"';} ?> /> wp-includes
 	</td></tr>
 	</table>
 
 	<table width="100%" border="0" cellspacing="0" cellpadding="6">
 	<tr><th width="45%" valign="top" align="right" scope="row">Include Context?</th><td valign="top" colspan="2">
-      	<input name="mitt_email_cont" type="radio" value='1' <? if ($mitt_email_cont == '1') {echo 'checked="checked"';} ?> /> Yes, include context
+      	<input name="mitt_email_cont" type="radio" value='1' <?php if ($mitt_email_cont == '1') {echo 'checked="checked"';} ?> /> Yes, include context
 	</td><td valign="top" colspan="2">
-      	<input name="mitt_email_cont" type="radio" value='0' <? if ($mitt_email_cont == '0') {echo 'checked="checked"';} ?> /> No, Don't include context
+      	<input name="mitt_email_cont" type="radio" value='0' <?php if ($mitt_email_cont == '0') {echo 'checked="checked"';} ?> /> No, Don't include context
 	</td></tr>
 
 	</table>
@@ -1080,8 +1103,8 @@ function mitt_er_options_page()
 	<h2>Plugin Information</h2>
 	<ul>
 	<li>Log Error Reporting<br />
-Depending on where an error occurs, it will be logged to a wp-logs folder that's either under the blog's installation folder, or under the wp-admin folder. New files are created for each day with names having the format "WP-dd-Mmm-yyyy.log"<br />
-eg. WP-05-Mar-2007.log</li>
+Depending on where an error occurs, it will be logged to a er-logs folder that's either under the blog's installation folder, or under the wp-admin folder. New files are created for each day with names having the format "ER-dd-Mmm-yyyy.log"<br />
+eg. ER-05-Mar-2007.log</li>
 
 	<li>Email Error Reporting<br />
 Email Error Reporting does not have a "no repeat errors" setting. This means that the blog administrator's email address will get an email for every reported error, every time.<br />
@@ -1124,7 +1147,7 @@ With all the possible option setting configurations, it's impossible to show exa
 	<p>WANTED - Bug Reports<br />
 This plugin has been tested to ensure that representative settings work as expected, but with approximately 4,420 different configurations, who knows? If you find a problem with any please let me know.</p>
 	<p>For more information, the latest version, etc. please visit <a href='http://www.mittineague.com/dev/er.php'>http://www.mittineague.com/dev/er.php</a></p>
-	<p>Questions? For support, please visit <a href='http://www.mittineague.com/forums/viewforum.php?f=30'>http://www.mittineague.com/forums/viewforum.php?f=30</a> (registration required to post)</p>
+	<p>Questions? For support, please visit <a href='http://www.mittineague.com/forums/viewtopic.php?t=100'>http://www.mittineague.com/forums/viewtopic.php?t=100</a> (registration required to post)</p>
 	<p>For comments / suggestions, please visit <a href='http://www.mittineague.com/blog/2007/03/error-reporting-plugin/'>http://www.mittineague.com/blog/2007/03/error-reporting-plugin/</a></p>
 	</div>
 <?php
@@ -1346,8 +1369,8 @@ function mitt_err_options($code, $msg, $file, $line, $context)
 * modify the $guardian regex. It is strongly recommended that you
 * use an appropriate regex to prevent malicious deletion of files.
 */
-			$mitt_wp_logfoldername = "wp-logs";
-			$mitt_wp_logfilename = strftime("WP-%d-%b-%Y.log");
+			$mitt_wp_logfoldername = "er-logs";
+			$mitt_wp_logfilename = strftime("ER-%d-%b-%Y.log");
 			$mitt_path_file = $mitt_wp_logfoldername . '/' . $mitt_wp_logfilename;
 
 			if ( !is_dir($mitt_wp_logfoldername) )
@@ -1357,7 +1380,7 @@ function mitt_err_options($code, $msg, $file, $line, $context)
 			$info .= "\r\n";
 			$info .= "$msg at $file ($line)";
 			$info .= "\r\n";
-			$info .= "timed at " . date ('d-M-Y H:i:s', mktime());
+			$info .= "timed at " . date ('d-M-Y H:i:s', time());
 			$info .= "\r\n";
 			$info .=  print_r($log_context, TRUE);
 			$info .= "\r\n";
@@ -1380,10 +1403,10 @@ function mitt_err_options($code, $msg, $file, $line, $context)
 					if ( fwrite($handle, $info) === FALSE )
 						return; // silently fail
 				}
-				chmod($mitt_wp_logfoldername, 0700);
-				chmod($mitt_path_file, 0600);
-				fclose($handle);
-				clearstatcache();
+			chmod($mitt_wp_logfoldername, 0700);
+			chmod($mitt_path_file, 0600);
+			fclose($handle);
+			clearstatcache();
 			}			
 		}
 	}
@@ -1527,7 +1550,7 @@ function mitt_err_options($code, $msg, $file, $line, $context)
 			$body .= "\r\n";
 			$body .= "$msg at $file ($line)";
 			$body .= "\r\n";
-			$body .= "timed at " . date ('d-M-Y H:i:s', mktime());
+			$body .= "timed at " . date ('d-M-Y H:i:s', time());
 			$body .= "\r\n";
 			$body .=  print_r($email_context, TRUE);
 

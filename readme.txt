@@ -2,13 +2,20 @@
 Contributors: Mittineague
 Tags: error reporting, log errors, email errors
 Requires at least: unknown
-Tested up to: 2.2
+Tested up to: 2.7
 Stable tag: Trunk
 
 == License ==
 Released under the terms of the GNU General Public License.
 
 == Version History ==
+Beta 0.9.5 27-Jan-2009  
+- changed mktime() to time()  
+- "info" link fix  
+- replaced "short tags"  
+- changed 'wp'logs to 'er'logs  
+- added javascript select/deselect all  
+
 Beta 0.9.4 10-Apr-2007  
 - made date_default_timezone_get/set OK for PHP < ver. 5  
 
