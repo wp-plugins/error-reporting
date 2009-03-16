@@ -3,13 +3,21 @@
 Plugin Name: Error Reporting
 Plugin URI: http://www.mittineague.com/dev/er.php
 Description: Logs Errors to file and/or Sends Error Notification emails.
-Version: Beta 0.9.5
+Version: Beta 0.9.6
 Author: Mittineague
 Author URI: http://www.mittineague.com
 */
 
 /*
 * Change Log
+* 
+* ver. Beta 0.9.6 15-Mar-2009
+* - fixed uninitialized variables
+* - fixed 'all types' 'all folders' bug
+* - remove/add 'shutdown' action
+* - added label tags
+* - friendlier CSS selectors
+* - added 'register_activation_hook'
 * 
 * ver. Beta 0.9.5 27-Jan-2009
 * - changed mktime() to time()
@@ -70,50 +78,53 @@ Author URI: http://www.mittineague.com
 \--------------------------------------------------------------------/
 */
 
+function mitt_er_activate()
+{
 /* default Log Error Reporting options set on install */
-$mitt_log = array('log_action' => '1',
-		'log_type_mode' => 'exc',
-		'log_type_W' => '0',
-		'log_type_N' => '1',
-		'log_type_S' => '1',
-		'log_andor' => 'or',
-		'log_fold_mode' => 'exc',
-		'log_fold_A' => '0',
-		'log_fold_C' => '0',
-		'log_fold_P' => '1',
-		'log_fold_I' => '0',
-		'log_cont' => '0',
-		'log_rpt' => '0',
-		);
+	$mitt_log = array('log_action' => '1',
+			'log_type_mode' => 'exc',
+			'log_type_W' => '0',
+			'log_type_N' => '1',
+			'log_type_S' => '1',
+			'log_andor' => 'or',
+			'log_fold_mode' => 'exc',
+			'log_fold_A' => '0',
+			'log_fold_C' => '0',
+			'log_fold_P' => '1',
+			'log_fold_I' => '0',
+			'log_cont' => '0',
+			'log_rpt' => '0',
+			);
 
-add_option('mitt_er_log', $mitt_log, 'Error Reporting');
+	add_option('mitt_er_log', $mitt_log, 'Error Reporting');
 
 /* default Email Error Reporting options NOT set on install */
-$mitt_email = array('email_action' => '0',
-		'email_type_mode' => '',
-		'email_type_W' => '0',
-		'email_type_N' => '0',
-		'email_type_S' => '0',
-		'email_andor' => '',
-		'email_fold_mode' => '',
-		'email_fold_A' => '0',
-		'email_fold_C' => '0',
-		'email_fold_P' => '0',
-		'email_fold_I' => '0',
-		'email_cont' => '',
-		);
+	$mitt_email = array('email_action' => '0',
+			'email_type_mode' => '',
+			'email_type_W' => '0',
+			'email_type_N' => '0',
+			'email_type_S' => '0',
+			'email_andor' => '',
+			'email_fold_mode' => '',
+			'email_fold_A' => '0',
+			'email_fold_C' => '0',
+			'email_fold_P' => '0',
+			'email_fold_I' => '0',
+			'email_cont' => '',
+			);
 
-add_option('mitt_er_email', $mitt_email, 'Error Reporting');
+	add_option('mitt_er_email', $mitt_email, 'Error Reporting');
 
-if ( function_exists('date_default_timezone_get') )
-{
-	$serv_tz = date_default_timezone_get();
+	if ( function_exists('date_default_timezone_get') )
+	{
+		$serv_tz = date_default_timezone_get();
+	}
+	else
+	{
+		$serv_tz = 'This_option_requires_PHP_ver5+';
+	}
+	add_option('mitt_er_tz', $serv_tz, 'Error Reporting');
 }
-else
-{
-	$serv_tz = 'This_option_requires_PHP_ver5+';
-}
-add_option('mitt_er_tz', $serv_tz, 'Error Reporting');
 
 function mitt_add_er_page()
 {
@@ -128,38 +139,38 @@ function mitt_er_css()
 {
 ?>
 <style type="text/css">
-#page_header {
-margin-top: 2em;
-}
-fieldset {
-border: 1px solid #999;
-margin-bottom: 1em;
-}
-#email_opts {
-border: 3px dotted #f00;
-}
-.logic {
-border: 1px solid #000;
-margin: 1.1em;
-}
-.logic td {
-padding: .1em;
-border-right: 1px solid #bbb;
-border-bottom: 1px solid #bbb;
-}
-#key {
-list-style-type: none;
-}
-#key li {
-margin: 1em 0 -1em 0;
-font-family: monospace;
-}
-#key_title {
-font-weight: bold;
-font-size: large;
-text-decoration: underline;
-padding: 0 0 .5em 0;
-}
+#er_page_header {
+  margin-top: 2em;
+ }
+fieldset.er_options {
+  border: 1px solid #999;
+  margin-bottom: 1em;
+ }
+#er_email_opts {
+  border: 3px dotted #f00;
+ }
+.er_logic {
+  border: 1px solid #000;
+  margin: 1.1em;
+ }
+.er_logic td {
+  padding: .1em;
+  border-right: 1px solid #bbb;
+  border-bottom: 1px solid #bbb;
+ }
+#er_key {
+  list-style-type: none;
+ }
+#er_key li {
+  margin: 1em 0 -1em 0;
+  font-family: monospace;
+ }
+#er_key_title {
+  font-weight: bold;
+  font-size: large;
+  text-decoration: underline;
+  padding: 0 0 .5em 0;
+ }
 </style>
 <?php
 }
@@ -172,9 +183,7 @@ function mitt_er_options_page()
 	if (isset($_POST['clear_options']))
 	{
 		check_admin_referer('error-reporting-clear-options_' . $ernonce);
-?>
-		<div id="message" class="updated fade"><p><strong>
-<?php
+
 		$clr_log_opts = array();
 		$clr_log_opts['log_action'] = '0';
 		$clr_log_opts['log_type_mode'] = '';
@@ -206,19 +215,17 @@ function mitt_er_options_page()
 
 		update_option('mitt_er_log', $clr_log_opts);
 		update_option('mitt_er_email', $clr_email_opts);
-
-		echo "Error Reporting Options have been Cleared<br />Error Reporting is now Disabled.<br />To Resume Error Reporting, select options and Update them.";
 ?>
-		</strong></p></div>
+		<div id="message" class="updated fade">
+			<p><strong>Error Reporting Options have been Cleared<br />Error Reporting is now Disabled.<br />To Resume Error Reporting, select options and Update them.</strong></p>
+		</div>
 <?php
 	}
 /* the Default Error Reporting option settings */
 	if (isset($_POST['restore_options']))
 	{
 		check_admin_referer('error-reporting-restore-options_' . $ernonce);
-?>
-		<div id="message" class="updated fade"><p><strong>
-<?php
+
 		$rstr_log_opts = array();
 		$rstr_log_opts['log_action'] = '1';
 		$rstr_log_opts['log_type_mode'] = 'exc';
@@ -250,10 +257,10 @@ function mitt_er_options_page()
 
 		update_option('mitt_er_log', $rstr_log_opts);
 		update_option('mitt_er_email', $rstr_email_opts);
-
-		echo "The Error Reporting Options have been set to the Default values";
 ?>
-		</strong></p></div>
+		<div id="message" class="updated fade">
+			<p><strong>The Error Reporting Options have been set to the Default values</strong></p>
+		</div>
 <?php
 	}
 /* Update Options Section
@@ -300,8 +307,8 @@ function mitt_er_options_page()
 			$upd_log_opts['log_fold_I'] = '0';
 			$upd_log_opts['log_andor'] = '';
 		}
-		$upd_log_opts['log_cont'] = ($upd_log_opts['log_action'] == '1') ? $_POST['mitt_log_cont'] : '';
-		$upd_log_opts['log_rpt'] = ($upd_log_opts['log_action'] == '1') ? $_POST['mitt_log_rpt'] : '';
+		$upd_log_opts['log_cont'] = ( ($upd_log_opts['log_action'] == '1') && isset($_POST['mitt_log_cont']) ) ? $_POST['mitt_log_cont'] : '0';
+		$upd_log_opts['log_rpt'] = ( ($upd_log_opts['log_action'] == '1') && isset($_POST['mitt_log_rpt']) ) ? $_POST['mitt_log_rpt'] : '0';
 
 		$upd_email_opts = array();
 		$upd_email_opts['email_action'] = $_POST['mitt_email_action'];
@@ -332,7 +339,8 @@ function mitt_er_options_page()
 			$upd_email_opts['email_fold_I'] = '0';
 			$upd_email_opts['email_andor'] = '';
 		}
-		$upd_email_opts['email_cont'] = ($upd_email_opts['email_action'] == '1') ? $_POST['mitt_email_cont'] : '';
+		$upd_email_opts['email_cont'] = ( ($upd_email_opts['email_action'] == '1') && isset($_POST['mitt_email_cont']) ) ? $_POST['mitt_email_cont'] : '0';
+
 
 		$upd_tz_opt = trim($_POST['mitt_er_tz']);
 
@@ -359,7 +367,7 @@ function mitt_er_options_page()
 		{
 			echo "You forgot to select either AND or OR for the Log Options.<br />New option settings have NOT been updated.";
 		}
-		else if  ( ( ( ($upd_email_opts['email_type_mode'] == 'inc' ) || ($upd_email_opts['email_type_mode'] == 'exc' ) ) &&  ( ($upd_email_opts['email_fold_mode'] == 'inc' ) || ($upd_email_opts['email_fold_mode'] == 'exc' ) ) ) && ($upd_email_opts['email_andor'] == '') )
+		if  ( ( ( ($upd_email_opts['email_type_mode'] == 'inc' ) || ($upd_email_opts['email_type_mode'] == 'exc' ) ) &&  ( ($upd_email_opts['email_fold_mode'] == 'inc' ) || ($upd_email_opts['email_fold_mode'] == 'exc' ) ) ) && ($upd_email_opts['email_andor'] == '') )
 		{
 			echo "You forgot to select either AND or OR for the Email Options.<br />New option settings have NOT been updated.";
 		}
@@ -426,6 +434,7 @@ function mitt_er_options_page()
 			}
 			clearstatcache();
 			$mitt_perms = 'NOTsecure';
+			remove_action( 'shutdown', 'wp_ob_end_flush_all', 1);
 		}
 		else
 		{
@@ -444,6 +453,7 @@ function mitt_er_options_page()
 			}
 			clearstatcache();
 			$mitt_perms = 'secure';
+			add_action( 'shutdown', 'wp_ob_end_flush_all', 1);
 		}
 	}
 /* get current option values to display in page forms */
@@ -478,7 +488,7 @@ function mitt_er_options_page()
 
 	$mitt_er_tz = get_option('mitt_er_tz');
 ?>
-	<div id="page_header">
+	<div id="er_page_header">
 	<h2>Error Reporting</h2>
 	</div>
 
@@ -486,12 +496,21 @@ function mitt_er_options_page()
 	<div class="wrap">
 	<h2>Log Files</h2>
 	<p>To view a file's contents, click on it's link. To save the file either right-click save-as or open the file and save using your browser's file menu. To Delete a file check it's checkbox and Submit.</p>
-	<p>To access a file, the folder and file permissions must be correct. Be sure to reset them after you're done to prevent outside access.<br />
+	<p>To access a file, the folder and file permissions must be correct. Be sure to reset them after you're done to prevent outside access to the log files and re-enable the 'shutdown' - (when PHP finishes executing script) - output buffer flush.<br />
 <?php
 	$mitt_perms = (!empty($mitt_perms)) ? $mitt_perms : '';
 	if ( ($mitt_perms == 'secure') || ($mitt_perms == 'NOTsecure') )
 	{
-		echo "The current Permission levels are <strong>" . $mitt_perms .  "</strong>";
+		$obf = '';
+		if ($mitt_perms == 'secure')
+		{
+			$obf = 'enabled';
+		}
+		else if ($mitt_perms == 'NOTsecure')
+		{
+			$obf = 'disabled';
+		}
+		echo "The current Permission levels are <strong>" . $mitt_perms .  "</strong> and the 'shutdown' output buffer flush is <strong>" . $obf . "</strong>";
 	}
 ?>
 	</p>
@@ -600,77 +619,77 @@ function mitt_er_options_page()
 		wp_nonce_field('error-reporting-update-options_' . $ernonce);
 ?>
 <!-- /* Log Options Fieldset */ -->
-	<fieldset class="options"> 
+	<fieldset class="er_options"> 
 	<legend>Log Options</legend>
 
 	<table width="100%" border="0" cellspacing="0" cellpadding="6">
 	<tr><th width="45%" valign="top" align="right" scope="row">Log Errors?</th><td valign="top">
-      	<input name="mitt_log_action" type="radio" value='1' <?php if ($mitt_log_action == '1') {echo 'checked="checked"';} ?> /> Yes, Log Errors
+      	<input id="er_la_yes" name="mitt_log_action" type="radio" value='1' <?php if ($mitt_log_action == '1') {echo 'checked="checked"';} ?> /> <label for="er_la_yes">Yes, Log Errors</label>
 	</td><td valign="top">
-      	<input name="mitt_log_action" type="radio" value='0' <?php if ($mitt_log_action == '0') {echo 'checked="checked"';} ?> /> No, Don't Log Errors
+      	<input id="er_la_no" name="mitt_log_action" type="radio" value='0' <?php if ($mitt_log_action == '0') {echo 'checked="checked"';} ?> /> <label for="er_la_no">No, Don't Log Errors</label>
 	</td></tr>
 	</table>
 
 	<table width="100%" border="0" cellspacing="0" cellpadding="6">
 	<tr><th width="45%" valign="top" align="right" scope="row">Include All Error Types?</th><td valign="top">
-      	<input name="mitt_log_type_mode" type="radio" value='all' <?php if ($mitt_log_type_mode == 'all') {echo 'checked="checked"';} ?> /> Yes, All Error Types
+      	<input id="er_ltm_all" name="mitt_log_type_mode" type="radio" value='all' <?php if ($mitt_log_type_mode == 'all') {echo 'checked="checked"';} ?> /> <label for="er_ltm_all">Yes, All Error Types</label>
 	</td><td valign="top">
-      	<input name="mitt_log_type_mode" type="radio" value='inc' <?php if ($mitt_log_type_mode == 'inc') {echo 'checked="checked"';} ?> /> No, Only Include the Error Types indicated below
+      	<input id="er_ltm_inc" name="mitt_log_type_mode" type="radio" value='inc' <?php if ($mitt_log_type_mode == 'inc') {echo 'checked="checked"';} ?> /> <label for="er_ltm_inc">No, Only Include the Error Types indicated below</label>
 	</td><td valign="top">
-      	<input name="mitt_log_type_mode" type="radio" value='exc' <?php if ($mitt_log_type_mode == 'exc') {echo 'checked="checked"';} ?> /> No, Exclude the Error Types indicated below
+      	<input id="er_ltm_exc" name="mitt_log_type_mode" type="radio" value='exc' <?php if ($mitt_log_type_mode == 'exc') {echo 'checked="checked"';} ?> /> <label for="er_ltm_exc">No, Exclude the Error Types indicated below</label>
 	</td></tr>
 
 	<tr><th width="45%" valign="top" align="right" scope="row">Error Types:</th><td valign="top">
-      	<input name="mitt_log_type_W" type="checkbox" value='1' <?php if ($mitt_log_type_W == '1') {echo 'checked="checked"';} ?> /> E_WARNING</td><td valign="top">
-      	<input name="mitt_log_type_N" type="checkbox" value='1' <?php if ($mitt_log_type_N == '1') {echo 'checked="checked"';} ?> /> E_NOTICE</td><td valign="top">
-      	<input name="mitt_log_type_S" type="checkbox" value='1' <?php if ($mitt_log_type_S == '1') {echo 'checked="checked"';} ?> /> E_STRICT
+      	<input id="er_lt_w" name="mitt_log_type_W" type="checkbox" value='1' <?php if ($mitt_log_type_W == '1') {echo 'checked="checked"';} ?> /><label for="er_lt_w">E_WARNING</label></td><td valign="top">
+      	<input id="er_lt_n" name="mitt_log_type_N" type="checkbox" value='1' <?php if ($mitt_log_type_N == '1') {echo 'checked="checked"';} ?> /><label for="er_lt_n">E_NOTICE</label></td><td valign="top">
+      	<input id="er_lt_s" name="mitt_log_type_S" type="checkbox" value='1' <?php if ($mitt_log_type_S == '1') {echo 'checked="checked"';} ?> /><label for="er_lt_s">E_STRICT</label>
 	</td></tr>
 	</table>
 
 	<table width="100%" border="0" cellspacing="0" cellpadding="6">
 	<tr><th width="45%" valign="top" align="right" scope="row">And or Or?</th><td valign="top">
-      	<input name="mitt_log_andor" type="radio" value='and' <?php if ($mitt_log_andor == 'and') {echo 'checked="checked"';} ?> /> AND &#38;&#38;
+      	<input id="er_l_a" name="mitt_log_andor" type="radio" value='and' <?php if ($mitt_log_andor == 'and') {echo 'checked="checked"';} ?> /><label for="er_l_a">AND &#38;&#38;</label>
 	</td><td valign="top">
-      	<input name="mitt_log_andor" type="radio" value='or' <?php if ($mitt_log_andor == 'or') {echo 'checked="checked"';} ?> /> OR ||
+      	<input id="er_l_o" name="mitt_log_andor" type="radio" value='or' <?php if ($mitt_log_andor == 'or') {echo 'checked="checked"';} ?> /><label for="er_l_o">OR ||</label>
 	</td></tr>
 	</table>
 
 	<table width="100%" border="0" cellspacing="0" cellpadding="6">
 	<tr><th width="45%" valign="top" align="right" scope="row">Include All Folders?</th><td valign="top">
-      	<input name="mitt_log_fold_mode" type="radio" value='all' <?php if ($mitt_log_fold_mode == 'all') {echo 'checked="checked"';} ?> /> Yes, All Folders
+      	<input id="er_lfm_all" name="mitt_log_fold_mode" type="radio" value='all' <?php if ($mitt_log_fold_mode == 'all') {echo 'checked="checked"';} ?> /><label for="er_lfm_all">Yes, All Folders</label>
 	</td><td valign="top">
-      	<input name="mitt_log_fold_mode" type="radio" value='inc' <?php if ($mitt_log_fold_mode == 'inc') {echo 'checked="checked"';} ?> /> No, Only Include the Folders indicated below
+      	<input id="er_lfm_inc" name="mitt_log_fold_mode" type="radio" value='inc' <?php if ($mitt_log_fold_mode == 'inc') {echo 'checked="checked"';} ?> /><label for="er_lfm_inc">No, Only Include the Folders indicated below</label>
 	</td><td valign="top">
-      	<input name="mitt_log_fold_mode" type="radio" value='exc' <?php if ($mitt_log_fold_mode == 'exc') {echo 'checked="checked"';} ?> /> No, Exclude the Folders indicated below
+      	<input id="er_lfm_exc" name="mitt_log_fold_mode" type="radio" value='exc' <?php if ($mitt_log_fold_mode == 'exc') {echo 'checked="checked"';} ?> /><label for="er_lfm_exc">No, Exclude the Folders indicated below</label>
 	</td><td>
 	</td></tr>
 
 	<tr><th width="45%" valign="top" align="right" scope="row">Folders:</th><td valign="top">
-      	<input name="mitt_log_fold_A" type="checkbox" value='1' <?php if ($mitt_log_fold_A == '1') {echo 'checked="checked"';} ?> /> wp-admin</td><td valign="top">
-      	<input name="mitt_log_fold_C" type="checkbox" value='1' <?php if ($mitt_log_fold_C == '1') {echo 'checked="checked"';} ?> /> wp-content</td><td valign="top">
-      	<input name="mitt_log_fold_P" type="checkbox" value='1' <?php if ($mitt_log_fold_P == '1') {echo 'checked="checked"';} ?> /> plugins</td><td valign="top">
-      	<input name="mitt_log_fold_I" type="checkbox" value='1' <?php if ($mitt_log_fold_I == '1') {echo 'checked="checked"';} ?> /> wp-includes
+      	<input id="er_lf_a" name="mitt_log_fold_A" type="checkbox" value='1' <?php if ($mitt_log_fold_A == '1') {echo 'checked="checked"';} ?> /><label for="er_lf_a">wp-admin</label></td><td valign="top">
+      	<input id="er_lf_c" name="mitt_log_fold_C" type="checkbox" value='1' <?php if ($mitt_log_fold_C == '1') {echo 'checked="checked"';} ?> /><label for="er_lf_c">wp-content</label></td><td valign="top">
+      	<input id="er_lf_p" name="mitt_log_fold_P" type="checkbox" value='1' <?php if ($mitt_log_fold_P == '1') {echo 'checked="checked"';} ?> /><label for="er_lf_p">plugins</label></td><td valign="top">
+      	<input id="er_lf_i" name="mitt_log_fold_I" type="checkbox" value='1' <?php if ($mitt_log_fold_I == '1') {echo 'checked="checked"';} ?> /><label for="er_lf_i">wp-includes</label>
 	</td></tr>
 	</table>
 
 	<table width="100%" border="0" cellspacing="0" cellpadding="6">
 	<tr><th width="45%" valign="top" align="right" scope="row">Include Context?</th><td valign="top" colspan="2">
-      	<input name="mitt_log_cont" type="radio" value='1' <?php if ($mitt_log_cont == '1') {echo 'checked="checked"';} ?> /> Yes, include context
+      	<input id="er_lc_yes" name="mitt_log_cont" type="radio" value='1' <?php if ($mitt_log_cont == '1') {echo 'checked="checked"';} ?> /> <label for="er_lc_yes">Yes, include context</label>
 	</td><td valign="top" colspan="2">
-      	<input name="mitt_log_cont" type="radio" value='0' <?php if ($mitt_log_cont == '0') {echo 'checked="checked"';} ?> /> No, Don't include context
+      	<input id="er_lc_no" name="mitt_log_cont" type="radio" value='0' <?php if ($mitt_log_cont == '0') {echo 'checked="checked"';} ?> /> <label for="er_lc_no">No, Don't include context</label>
 	</td></tr>
 
 	<tr><th width="45%" valign="top" align="right" scope="row">Log Repeat Errors?</th><td valign="top" colspan="2">
-      	<input name="mitt_log_rpt" type="radio" value='1' <?php if ($mitt_log_rpt == '1') {echo 'checked="checked"';} ?> /> Yes, Log repeat errors
+      	<input id="er_lr_yes" name="mitt_log_rpt" type="radio" value='1' <?php if ($mitt_log_rpt == '1') {echo 'checked="checked"';} ?> /> <label for="er_lr_yes">Yes, Log repeat errors</label>
 	</td><td valign="top" colspan="2">
-      	<input name="mitt_log_rpt" type="radio" value='0' <?php if ($mitt_log_rpt == '0') {echo 'checked="checked"';} ?> /> No, Don't Log repeat errors
+      	<input id="er_lr_no" name="mitt_log_rpt" type="radio" value='0' <?php if ($mitt_log_rpt == '0') {echo 'checked="checked"';} ?> /> <label for="er_lr_no">No, Don't Log repeat errors</label>
 	</td></tr>
 
 	</table>
 	</fieldset>	
 
 <!-- /* Timezone Option Fieldset */ -->
-	<fieldset class="options"> 
+	<fieldset class="er_options"> 
 	<legend>Timezone Option</legend>
 
 	<p>Please see the PHP documentation - Appendix I - at <a href='http://www.php.net/manual/en/timezones.php'>http://www.php.net/manual/en/timezones.php</a> for other timezone identifiers.<br />*NOTE* This option requires PHP version 5+</p>
@@ -686,64 +705,64 @@ function mitt_er_options_page()
 	</fieldset>
 
 <!-- /* Email Options Fieldset */ -->
-	<fieldset class="options" id="email_opts"> 
+	<fieldset class="er_options" id="er_email_opts"> 
 	<legend>Email Options</legend>
 
 	<table width="100%" border="0" cellspacing="0" cellpadding="6">
 	<tr><th width="45%" valign="top" align="right" scope="row">Email Errors?</th><td valign="top">
-      	<input name="mitt_email_action" type="radio" value='1' <?php if ($mitt_email_action == '1') {echo 'checked="checked"';} ?> /> Yes, Email Errors
+      	<input id="er_ea_yes" name="mitt_email_action" type="radio" value='1' <?php if ($mitt_email_action == '1') {echo 'checked="checked"';} ?> /> <label for="er_ea_yes">Yes, Email Errors</label>
 	</td><td valign="top">
-      	<input name="mitt_email_action" type="radio" value='0' <?php if ($mitt_email_action == '0') {echo 'checked="checked"';} ?> /> No, Don't Email Errors
+      	<input id="er_ea_no" name="mitt_email_action" type="radio" value='0' <?php if ($mitt_email_action == '0') {echo 'checked="checked"';} ?> /> <label for="er_ea_no">No, Don't Email Errors</label>
 	</td></tr>
 	</table>
 
 	<table width="100%" border="0" cellspacing="0" cellpadding="6">
 	<tr><th width="45%" valign="top" align="right" scope="row">Include All Error Types?</th><td valign="top">
-      	<input name="mitt_email_type_mode" type="radio" value='all' <?php if ($mitt_email_type_mode == 'all') {echo 'checked="checked"';} ?> /> Yes, All Error Types
+      	<input id="er_etm_all" name="mitt_email_type_mode" type="radio" value='all' <?php if ($mitt_email_type_mode == 'all') {echo 'checked="checked"';} ?> /> <label for="er_etm_all">Yes, All Error Types</label>
 	</td><td valign="top">
-      	<input name="mitt_email_type_mode" type="radio" value='inc' <?php if ($mitt_email_type_mode == 'inc') {echo 'checked="checked"';} ?> /> No, Only Include the Error Types indicated below
+      	<input id="er_etm_inc" name="mitt_email_type_mode" type="radio" value='inc' <?php if ($mitt_email_type_mode == 'inc') {echo 'checked="checked"';} ?> /> <label for="er_etm_inc">No, Only Include the Error Types indicated below</label>
 	</td><td valign="top">
-      	<input name="mitt_email_type_mode" type="radio" value='exc' <?php if ($mitt_email_type_mode == 'exc') {echo 'checked="checked"';} ?> /> No, Exclude the Error Types indicated below
+      	<input id="er_etm_exc" name="mitt_email_type_mode" type="radio" value='exc' <?php if ($mitt_email_type_mode == 'exc') {echo 'checked="checked"';} ?> /> <label for="er_etm_exc">No, Exclude the Error Types indicated below</label>
 	</td></tr>
 
 	<tr><th width="45%" valign="top" align="right" scope="row">Error Types:</th><td valign="top">
-      	<input name="mitt_email_type_W" type="checkbox" value='1' <?php if ($mitt_email_type_W == '1') {echo 'checked="checked"';} ?> /> E_WARNING</td><td valign="top">
-      	<input name="mitt_email_type_N" type="checkbox" value='1' <?php if ($mitt_email_type_N == '1') {echo 'checked="checked"';} ?> /> E_NOTICE</td><td valign="top">
-      	<input name="mitt_email_type_S" type="checkbox" value='1' <?php if ($mitt_email_type_S == '1') {echo 'checked="checked"';} ?> /> E_STRICT
+      	<input id="er_et_w" name="mitt_email_type_W" type="checkbox" value='1' <?php if ($mitt_email_type_W == '1') {echo 'checked="checked"';} ?> /><label for="er_et_w">E_WARNING</label></td><td valign="top">
+      	<input id="er_et_n" name="mitt_email_type_N" type="checkbox" value='1' <?php if ($mitt_email_type_N == '1') {echo 'checked="checked"';} ?> /><label for="er_et_n">E_NOTICE</label></td><td valign="top">
+      	<input id="er_et_s" name="mitt_email_type_S" type="checkbox" value='1' <?php if ($mitt_email_type_S == '1') {echo 'checked="checked"';} ?> /><label for="er_et_s">E_STRICT</label>
 	</td></tr>
 	</table>
 
 	<table width="100%" border="0" cellspacing="0" cellpadding="6">
 	<tr><th width="45%" valign="top" align="right" scope="row">And or Or?</th><td valign="top">
-      	<input name="mitt_email_andor" type="radio" value='and' <?php if ($mitt_email_andor == 'and') {echo 'checked="checked"';} ?> /> AND &#38;&#38;
+      	<input id="er_e_a" name="mitt_email_andor" type="radio" value='and' <?php if ($mitt_email_andor == 'and') {echo 'checked="checked"';} ?> /> <label for="er_e_a">AND &#38;&#38;</label>
 	</td><td valign="top">
-      	<input name="mitt_email_andor" type="radio" value='or' <?php if ($mitt_email_andor == 'or') {echo 'checked="checked"';} ?> /> OR ||
+      	<input id="er_e_o" name="mitt_email_andor" type="radio" value='or' <?php if ($mitt_email_andor == 'or') {echo 'checked="checked"';} ?> /> <label for="er_e_o">OR ||</label>
 	</td></tr>
 	</table>
 
 	<table width="100%" border="0" cellspacing="0" cellpadding="6">
 	<tr><th width="45%" valign="top" align="right" scope="row">Include All Folders?</th><td valign="top">
-      	<input name="mitt_email_fold_mode" type="radio" value='all' <?php if ($mitt_email_fold_mode == 'all') {echo 'checked="checked"';} ?> /> Yes, All Folders
+      	<input id="er_efm_all" name="mitt_email_fold_mode" type="radio" value='all' <?php if ($mitt_email_fold_mode == 'all') {echo 'checked="checked"';} ?> /> <label for="er_efm_all">Yes, All Folders</label>
 	</td><td valign="top">
-      	<input name="mitt_email_fold_mode" type="radio" value='inc' <?php if ($mitt_email_fold_mode == 'inc') {echo 'checked="checked"';} ?> /> No, Only Include the Folders indicated below
+      	<input id="er_efm_inc" name="mitt_email_fold_mode" type="radio" value='inc' <?php if ($mitt_email_fold_mode == 'inc') {echo 'checked="checked"';} ?> /> <label for="er_efm_inc">No, Only Include the Folders indicated below</label>
 	</td><td valign="top">
-      	<input name="mitt_email_fold_mode" type="radio" value='exc' <?php if ($mitt_email_fold_mode == 'exc') {echo 'checked="checked"';} ?> /> No, Exclude the Folders indicated below
+      	<input id="er_efm_exc" name="mitt_email_fold_mode" type="radio" value='exc' <?php if ($mitt_email_fold_mode == 'exc') {echo 'checked="checked"';} ?> /> <label for="er_efm_exc">No, Exclude the Folders indicated below</label>
 	</td><td>
 	</td></tr>
 
 	<tr><th width="45%" valign="top" align="right" scope="row">Folders:</th><td valign="top">
-      	<input name="mitt_email_fold_A" type="checkbox" value='1' <?php if ($mitt_email_fold_A == '1') {echo 'checked="checked"';} ?> /> wp-admin</td><td valign="top">
-      	<input name="mitt_email_fold_C" type="checkbox" value='1' <?php if ($mitt_email_fold_C == '1') {echo 'checked="checked"';} ?> /> wp-content</td><td valign="top">
-      	<input name="mitt_email_fold_P" type="checkbox" value='1' <?php if ($mitt_email_fold_P == '1') {echo 'checked="checked"';} ?> /> plugins</td><td valign="top">
-      	<input name="mitt_email_fold_I" type="checkbox" value='1' <?php if ($mitt_email_fold_I == '1') {echo 'checked="checked"';} ?> /> wp-includes
+      	<input id="er_ef_a" name="mitt_email_fold_A" type="checkbox" value='1' <?php if ($mitt_email_fold_A == '1') {echo 'checked="checked"';} ?> /><label for="er_ef_a">wp-admin</label></td><td valign="top">
+      	<input id="er_ef_c" name="mitt_email_fold_C" type="checkbox" value='1' <?php if ($mitt_email_fold_C == '1') {echo 'checked="checked"';} ?> /><label for="er_ef_c">wp-content</label></td><td valign="top">
+      	<input id="er_ef_p" name="mitt_email_fold_P" type="checkbox" value='1' <?php if ($mitt_email_fold_P == '1') {echo 'checked="checked"';} ?> /><label for="er_ef_p">plugins</label></td><td valign="top">
+      	<input id="er_ef_i" name="mitt_email_fold_I" type="checkbox" value='1' <?php if ($mitt_email_fold_I == '1') {echo 'checked="checked"';} ?> /><label for="er_ef_i">wp-includes</label>
 	</td></tr>
 	</table>
 
 	<table width="100%" border="0" cellspacing="0" cellpadding="6">
 	<tr><th width="45%" valign="top" align="right" scope="row">Include Context?</th><td valign="top" colspan="2">
-      	<input name="mitt_email_cont" type="radio" value='1' <?php if ($mitt_email_cont == '1') {echo 'checked="checked"';} ?> /> Yes, include context
+      	<input id="er_ec_yes" name="mitt_email_cont" type="radio" value='1' <?php if ($mitt_email_cont == '1') {echo 'checked="checked"';} ?> /> <label for="er_ec_yes">Yes, include context</label>
 	</td><td valign="top" colspan="2">
-      	<input name="mitt_email_cont" type="radio" value='0' <?php if ($mitt_email_cont == '0') {echo 'checked="checked"';} ?> /> No, Don't include context
+      	<input id="er_ec_no" name="mitt_email_cont" type="radio" value='0' <?php if ($mitt_email_cont == '0') {echo 'checked="checked"';} ?> /> <label for="er_ec_no">No, Don't include context</label>
 	</td></tr>
 
 	</table>
@@ -784,7 +803,7 @@ function mitt_er_options_page()
 
 <table><tr><td>
 
-<table class="logic">
+<table class="er_logic">
 <caption>All Types - Inc Admin</caption>
 <tr>
 <td></td>	<td>Of</td>	<td>A</td>	<td>C</td>	<td>P</td>	<td>I</td>
@@ -805,7 +824,7 @@ function mitt_er_options_page()
 
 </td><td>
 
-<table class="logic">
+<table class="er_logic">
 <caption>All Types - Exc Admin</caption>
 <tr>
 <td></td>	<td>Of</td>	<td>A</td>	<td>C</td>	<td>P</td>	<td>I</td>
@@ -826,7 +845,7 @@ function mitt_er_options_page()
 
 </td><td>
 
-<table class="logic">
+<table class="er_logic">
 <caption>Inc Warning - All folders</caption>
 <tr>
 <td></td>	<td>Of</td>	<td>A</td>	<td>C</td>	<td>P</td>	<td>I</td>
@@ -847,7 +866,7 @@ function mitt_er_options_page()
 
 </td><td>
 
-<table class="logic">
+<table class="er_logic">
 <caption>Exc Warning - All Folders</caption>
 <tr>
 <td></td>	<td>Of</td>	<td>A</td>	<td>C</td>	<td>P</td>	<td>I</td>
@@ -868,7 +887,7 @@ function mitt_er_options_page()
 
 </td></tr><tr><td>
 
-<table class="logic">
+<table class="er_logic">
 <caption>Inc Warning AND Inc Admin</caption>
 <tr>
 <td></td>	<td>Of</td>	<td>A</td>	<td>C</td>	<td>P</td>	<td>I</td>
@@ -889,7 +908,7 @@ function mitt_er_options_page()
 
 </td><td>
 
-<table class="logic">
+<table class="er_logic">
 <caption>Inc Warning OR Inc Admin</caption>
 <tr>
 <td></td>	<td>Of</td>	<td>A</td>	<td>C</td>	<td>P</td>	<td>I</td>
@@ -910,7 +929,7 @@ function mitt_er_options_page()
 
 </td><td>
 
-<table class="logic">
+<table class="er_logic">
 <caption>Exc Warning AND Exc Admin</caption>
 <tr>
 <td></td>	<td>Of</td>	<td>A</td>	<td>C</td>	<td>P</td>	<td>I</td>
@@ -931,7 +950,7 @@ function mitt_er_options_page()
 
 </td><td>
 
-<table class="logic">
+<table class="er_logic">
 <caption>Exc Warning OR Exc Admin</caption>
 <tr>
 <td></td>	<td>Of</td>	<td>A</td>	<td>C</td>	<td>P</td>	<td>I</td>
@@ -952,7 +971,7 @@ function mitt_er_options_page()
 
 </td></tr><tr><td>
 
-<table class="logic">
+<table class="er_logic">
 <caption>Inc Warning AND Exc Admin</caption>
 <tr>
 <td></td>	<td>Of</td>	<td>A</td>	<td>C</td>	<td>P</td>	<td>I</td>
@@ -973,7 +992,7 @@ function mitt_er_options_page()
 
 </td><td>
 
-<table class="logic">
+<table class="er_logic">
 <caption>Inc Warning OR Exc Admin</caption>
 <tr>
 <td></td>	<td>Of</td>	<td>A</td>	<td>C</td>	<td>P</td>	<td>I</td>
@@ -994,7 +1013,7 @@ function mitt_er_options_page()
 
 </td><td>
 
-<table class="logic">
+<table class="er_logic">
 <caption>Exc Warning AND Inc Admin</caption>
 <tr>
 <td></td>	<td>Of</td>	<td>A</td>	<td>C</td>	<td>P</td>	<td>I</td>
@@ -1015,7 +1034,7 @@ function mitt_er_options_page()
 
 </td><td>
 
-<table class="logic">
+<table class="er_logic">
 <caption>Exc Warning OR Inc Admin</caption>
 <tr>
 <td></td>	<td>Of</td>	<td>A</td>	<td>C</td>	<td>P</td>	<td>I</td>
@@ -1036,7 +1055,7 @@ function mitt_er_options_page()
 
 </td></tr><tr><td>
 
-<table class="logic">
+<table class="er_logic">
 <caption>Default Log Options - Exc N,S OR Exc Pl</caption>
 <tr>
 <td></td>	<td>Of</td>	<td>A</td>	<td>C</td>	<td>P</td>	<td>I</td>
@@ -1057,7 +1076,7 @@ function mitt_er_options_page()
 
 </td><td>
 
-<table class="logic">
+<table class="er_logic">
 <caption>Default Email Options - Exc N,S AND Exc Pl</caption>
 <tr>
 <td></td>	<td>Of</td>	<td>A</td>	<td>C</td>	<td>P</td>	<td>I</td>
@@ -1078,8 +1097,8 @@ function mitt_er_options_page()
 
 </td><td colspan="2">
 
-<ul id="key">
-<li id="key_title">Key:</li>
+<ul id="er_key">
+<li id="er_key_title">Key:</li>
 <li>Of:&nbsp;&nbsp;Other folders</li>
 <li>A:&nbsp;&nbsp;&nbsp;wp-admin folder</li>
 <li>C:&nbsp;&nbsp;&nbsp;wp-content folder</li>
@@ -1360,7 +1379,9 @@ function mitt_err_options($code, $msg, $file, $line, $context)
 		}
 
 		$log_cond_test = $log_lead_paren . $log_left_exp . $log_andor . $log_right_exp . $log_end_paren;
-		
+
+		if ( $log_cond_test == '' ) $log_cond_test = "1 == 1";
+
 		if(eval("return $log_cond_test;"))
 		{
 /*
@@ -1541,6 +1562,8 @@ function mitt_err_options($code, $msg, $file, $line, $context)
 
 		$email_cond_test = $email_lead_paren . $email_left_exp . $email_andor . $email_right_exp . $email_end_paren;
 
+//		if ( $mail_cond_test == '' ) $mail_cond_test = "1 == 1";
+
 		if(eval("return $email_cond_test;"))
 		{
 			$admin_email = get_bloginfo('admin_email');
@@ -1578,4 +1601,10 @@ if (function_exists('add_action'))
 	add_action('admin_head', 'mitt_er_css');
 	add_action('admin_menu', 'mitt_add_er_page');
 }
+
+if (function_exists('register_activation_hook'))
+{
+	register_activation_hook( __FILE__, 'mitt_er_activate' );
+}
+
 ?>
