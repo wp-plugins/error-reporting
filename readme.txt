@@ -9,7 +9,7 @@ Stable tag: Trunk
 Released under the terms of the GNU General Public License.  
 
 == Version History ==
-Beta 0.10.0 ??-???-2009  
+Beta 0.10.0 01-Apr-2009  
 - added ping error - dashboard widget code  
 - added self-cleanup hooks  
 - removed deprecated option descriptions  

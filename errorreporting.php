@@ -11,7 +11,7 @@ Author URI: http://www.mittineague.com
 /*
 * Change Log
 * 
-* ver. Beta 0.10.0 ??-???-2009
+* ver. Beta 0.10.0 01-Apr-2009
 * - added ping error - dashboard widget code
 * - added self-cleanup hooks
 * - removed deprecated option descriptions
