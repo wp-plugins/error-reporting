@@ -2,14 +2,24 @@
 /*
 Plugin Name: Error Reporting
 Plugin URI: http://www.mittineague.com/dev/er.php
-Description: Logs Errors to file and/or Sends Error Notification emails.
-Version: Beta 0.9.6
+Description: Logs Errors to file and/or Sends Error Notification emails. Records Ping Errors and displays them in a dashboard widget.
+Version: Beta 0.10.0
 Author: Mittineague
 Author URI: http://www.mittineague.com
 */
 
 /*
 * Change Log
+* 
+* ver. Beta 0.10.0 ??-???-2009
+* - added ping error - dashboard widget code
+* - added self-cleanup hooks
+* - removed deprecated option descriptions
+* - nonce tweaks
+* - removed print_r $context
+* - added return false
+* - changed admin CSS hook
+* - removed fail returns from handler
 * 
 * ver. Beta 0.9.6 15-Mar-2009
 * - fixed uninitialized variables
@@ -96,7 +106,7 @@ function mitt_er_activate()
 			'log_rpt' => '0',
 			);
 
-	add_option('mitt_er_log', $mitt_log, 'Error Reporting');
+	add_option('mitt_er_log', $mitt_log);
 
 /* default Email Error Reporting options NOT set on install */
 	$mitt_email = array('email_action' => '0',
@@ -113,7 +123,7 @@ function mitt_er_activate()
 			'email_cont' => '',
 			);
 
-	add_option('mitt_er_email', $mitt_email, 'Error Reporting');
+	add_option('mitt_er_email', $mitt_email);
 
 	if ( function_exists('date_default_timezone_get') )
 	{
@@ -123,24 +133,135 @@ function mitt_er_activate()
 	{
 		$serv_tz = 'This_option_requires_PHP_ver5+';
 	}
-	add_option('mitt_er_tz', $serv_tz, 'Error Reporting');
+	add_option('mitt_er_tz', $serv_tz);
+
+	$mitt_er_ping_errs = array();
+	add_option('mitt_er_ping_errors', $mitt_er_ping_errs);
+
+	$mitt_er_pe_len = 25;
+	add_option('mitt_er_ping_error_length', $mitt_er_pe_len);
 }
 
-function mitt_add_er_page()
+function mitt_er_deactivate()
 {
-	if (function_exists('add_options_page'))
-	{
-		add_options_page('Error Reporting Options', 'ErrorReporting', 8, basename(__FILE__), 'mitt_er_options_page');
-	}
-	$ernonce = md5('errorreporting');
+		remove_action('init', 'mitt_err_handler');
+		remove_action('admin_menu', 'mitt_add_er_page');
+		remove_action('wp_dashboard_setup', 'add_er_dashboard_widget');
+		delete_option('mitt_er_ping_error_length');
 }
+
+function mitt_remove_log_files()
+{
+	$guardian = '/^[\.]{1,2}\/er-logs\/ER-[0-3][0-9]-[ADFJMNOS][abceglnoprtuvy]{2}-20[0-9]{2}\.log$/';
+
+	$main_dir = "../er-logs";
+	if ( is_dir($main_dir) )
+	{
+		chmod($main_dir, 0705);
+		exec("chmod 604 " . $main_dir . "/*.log");
+
+		$open_dir = opendir($main_dir);
+		while (false !== ($file = readdir($open_dir)))
+		{
+			if ($file != "." && $file != "..")
+			{
+				if(preg_match($guardian, $file))
+				{
+ 				      unlink($main_dir . "/" . $file);
+				}
+			}
+		}
+		closedir($open_dir);
+	}
+	rmdir($main_dir);
+
+	$admin_dir = "./er-logs";
+	if ( is_dir($admin_dir) )
+	{
+		chmod($admin_dir, 0705);
+		exec("chmod 604 " . $admin_dir . "/*.log");
+
+		$open_dir2 = opendir($admin_dir);
+		$incrementer2 = 0;
+		while (false !== ($file2 = readdir($open_dir2)))
+		{
+			if ($file2 != "." && $file2 != "..")
+			{
+				if(preg_match($guardian, $file))
+				{
+				      unlink($admin_dir . "/" . $file2);
+				}
+			}
+		}
+		closedir($open_dir2);
+	}
+	rmdir($admin_dir);
+}
+
+function mitt_er_uninstall()
+{
+	delete_option('mitt_er_log');
+	delete_option('mitt_er_email');
+	delete_option('mitt_er_tz');
+	delete_option('mitt_er_ping_errors');
+	mitt_remove_log_files();		
+}
+
+function mitt_er_admin_init()
+{
+	register_setting('mitt-er-poptions', 'mitt_er_pe_len', 'absint');
+}
+
+function mitt_er_dashboard_widget()
+{
+	$er_ping_errs = get_option('mitt_er_ping_errors');
+	$er_ping_errs = array_unique($er_ping_errs);
+	$num_errs = count($er_ping_errs);
+	if ($num_errs === 0)
+	{
+		echo "There are no recorded ping errors";
+	}
+	else
+	{
+		echo current($er_ping_errs) . "<br />";
+
+		for ($pe = 1; $pe < $num_errs; $pe++)
+		{
+			echo next($er_ping_errs) . "<br />";
+		}
+	}
+}
+
+function add_er_dashboard_widget()
+{
+	wp_add_dashboard_widget('mitt_er_ping_error_widget', 'Ping Errors', 'mitt_er_dashboard_widget');	
+} 
 
 function mitt_er_css()
 {
 ?>
 <style type="text/css">
-#er_page_header {
-  margin-top: 2em;
+.wrap h3 {
+  font-style: italic;
+ }
+.postbox {
+  margin-top: 1.5em;
+ }
+.postbox h4{
+  margin: 0;
+  padding: 0.5em;
+  background-color: #eee;
+ }
+.postbox .inside {
+  margin: 0;
+  padding-left: 1em;
+  background-color: #fff;
+ }
+.postbox .inside form p {
+  margin-top: 0;
+ }
+.postbox .inside form .submit {
+  padding: 0 0 0.5em 0;
  }
 fieldset.er_options {
   border: 1px solid #999;
@@ -171,18 +292,74 @@ fieldset.er_options {
   text-decoration: underline;
   padding: 0 0 .5em 0;
  }
+ul li span.er_pi_head {
+  font-family: monospace;
+  font-size: 1.3em;
+ }
 </style>
 <?php
+}
+
+function mitt_add_er_page()
+{
+	if (function_exists('add_options_page'))
+	{
+		$mitt_er_op = add_options_page('Error Reporting Options', 'ErrorReporting', 8, basename(__FILE__), 'mitt_er_options_page');
+		add_action("admin_head-$mitt_er_op", 'mitt_er_css');
+	}
+	$ernonce = md5('errorreporting');
 }
 
 function mitt_er_options_page()
 {
 	global $ernonce;
 
+	$max_ping_saves = 100;	// arbitrary number
+	register_setting('mitt-er-poptions', 'mitt_er_pe_len', 'absint');
+
+	if ( isset($_POST['mitt_update_erp']) )
+	{
+		check_admin_referer('er-pe-update_' . $ernonce, '_mitt_er_peu');
+
+		if ( ( is_numeric($_POST['mitt_er_pe_len']) ) && ($_POST['mitt_er_pe_len'] >= 0) )
+		{
+			$mitt_er_pe_len = absint($_POST['mitt_er_pe_len']);
+			$mitt_er_pe_len = ($mitt_er_pe_len > $max_ping_saves) ? $max_ping_saves : $mitt_er_pe_len;
+			update_option('mitt_er_ping_error_length', $mitt_er_pe_len);
+			
+			$mitt_er_p_errs = get_option('mitt_er_ping_errors');
+			$num_p_errs = count($mitt_er_p_errs);
+
+			if ( $num_p_errs > $mitt_er_pe_len )
+			{
+				$mitt_er_p_errs = array_slice($mitt_er_p_errs, 0, $mitt_er_pe_len);
+				update_option('mitt_er_ping_errors', $mitt_er_p_errs);
+			}
+?>
+		<div id="message" class="updated fade">
+			<p>The number of Ping Errors to save has been updated</p>
+		</div>
+<?php
+		}
+	}
+
+	if ( isset($_POST['mitt_er_rem_pe']) )
+	{
+		check_admin_referer('er-pe-remove-errors_' . $ernonce, '_mitt_er_pere');
+
+		$mitt_er_p_errs = array();
+		update_option('mitt_er_ping_errors', $mitt_er_p_errs);
+?>
+		<div id="message" class="updated fade">
+			<p>All saved Ping Errors have been removed</p>
+		</div>
+<?php
+	}
+
 /* Clear Options Section */
 	if (isset($_POST['clear_options']))
 	{
-		check_admin_referer('error-reporting-clear-options_' . $ernonce);
+		check_admin_referer('error-reporting-clear-options_' . $ernonce, '_mitt_er_co');
 
 		$clr_log_opts = array();
 		$clr_log_opts['log_action'] = '0';
@@ -224,7 +401,7 @@ function mitt_er_options_page()
 /* the Default Error Reporting option settings */
 	if (isset($_POST['restore_options']))
 	{
-		check_admin_referer('error-reporting-restore-options_' . $ernonce);
+		check_admin_referer('error-reporting-restore-options_' . $ernonce, '_mitt_er_ro');
 
 		$rstr_log_opts = array();
 		$rstr_log_opts['log_action'] = '1';
@@ -274,7 +451,7 @@ function mitt_er_options_page()
 */ 
 	if (isset($_POST['update_options']))
 	{
-		check_admin_referer('error-reporting-update-options_' . $ernonce);
+		check_admin_referer('error-reporting-update-options_' . $ernonce, '_mitt_er_uo');
 ?>
 		<div id="message" class="updated fade"><p><strong>
 <?php
@@ -386,7 +563,7 @@ function mitt_er_options_page()
 /* Delete Log Files Section */
 	if (isset($_POST['delete_log_files']))
 	{
-		check_admin_referer('error-reporting-delete-log-files_' . $ernonce);
+		check_admin_referer('error-reporting-delete-log-files_' . $ernonce, '_mitt_er_dlf');
 ?>
 		<div id="message" class="updated fade"><p><strong>
 <?php
@@ -416,7 +593,7 @@ function mitt_er_options_page()
 /* Toggle Permissions Section */
 	if (isset($_POST['toggle_permissions']))
 	{
-		check_admin_referer('error-reporting-toggle-permissions_' . $ernonce);
+		check_admin_referer('error-reporting-toggle-permissions_' . $ernonce, '_mitt_er_tp');
 		if( ($_POST['mitt_perms'] == 'secure') || ($_POST['mitt_perms'] == '') )
 		{
 			$main_dir = "../er-logs";
@@ -488,13 +665,83 @@ function mitt_er_options_page()
 
 	$mitt_er_tz = get_option('mitt_er_tz');
 ?>
-	<div id="er_page_header">
+	<div class="wrap">
 	<h2>Error Reporting</h2>
-	</div>
+
+<!-- /* SHOW EXISTING PING ERRORS SECTION */ -->
+	<h3>Ping Errors</h3>
+		<div class="postbox">
+			<h4>Saved Ping Errors</h4>
+			<div class="inside">
+<?php
+	$er_ping_errs = get_option('mitt_er_ping_errors');
+	$num_p_errs = count($er_ping_errs);
+
+	function mitt_er_pe_prep($error_line)
+	{
+		$error_line = rtrim($error_line, '<br />');
+		$error_line = str_replace('<br />', ' ~ ', $error_line);
+		return $error_line;
+	}
+
+	if ($num_p_errs === 0)
+	{
+		echo '<p>There are no recorded ping errors</p>';
+	}
+	else
+	{
+		$er_ping_errs = array_map('mitt_er_pe_prep', $er_ping_errs);
+		echo '<ul>';
+		echo '<li>' . current($er_ping_errs) . '</li>';
+
+		for ($pe = 1; $pe < $num_p_errs; $pe++)
+		{
+			echo '<li>' . next($er_ping_errs) . '</li>';
+		}
+		echo '</ul>';
+	}
+?>
+			</div>
+		</div>
+
+		<div class="postbox">
+			<h4>Ping Error Setting</h4>
+			<div class="inside">
+				<form method="post" action="<?php echo $_SERVER["REQUEST_URI"]; ?>"><?php
+	if ( function_exists('wp_nonce_field') )
+		wp_nonce_field('er-pe-update_' . $ernonce, '_mitt_er_peu');
+	settings_fields('mitt-er-poptions');
+?>
+		<label for="mitt_er_pe_len">Number of Ping Errors to Save: </label>
+			<input id="mitt_er_pe_len" name="mitt_er_pe_len" type="text" style="width: 2em; text-align: right;" value="<?php echo get_option('mitt_er_ping_error_length'); ?>" />
+		<p>Setting a value lower than the existing number of saved ping errors will truncate the saved ping errors to that amount.<br />
+		Maximum number is <?php echo $max_ping_saves; ?>.</p>
+		<p class="submit">
+			<input type="submit" name="mitt_update_erp" value="<?php _e('Save Changes') ?>" class="button" />
+		</p>
+				</form>
+			</div>
+		</div>
+
+<!-- /* REMOVE ALL PING ERRORS SECTION */ -->
+		<div class="postbox">
+			<h4>Remove all Saved Ping Errors</h4>
+			<div class="inside">
+				<form method="post" action="<?php echo $_SERVER["REQUEST_URI"]; ?>">
+<?php
+	if ( function_exists('wp_nonce_field') )
+		wp_nonce_field('er-pe-remove-errors_' . $ernonce, '_mitt_er_pere');
+?>
+		<p>This will remove all of the saved Ping Errors</p>
+		<p class="submit">
+			<input type="submit" id="mitt_er_rem_pe" name="mitt_er_rem_pe" value="<?php _e('Remove Saved Ping Errors') ?>" class="button" />
+		</p>
+				</form>
+			</div>
+		</div>
 
 <!-- /* LOG FILES SECTION */ -->
-	<div class="wrap">
-	<h2>Log Files</h2>
+	<h3>Log Files</h3>
 	<p>To view a file's contents, click on it's link. To save the file either right-click save-as or open the file and save using your browser's file menu. To Delete a file check it's checkbox and Submit.</p>
 	<p>To access a file, the folder and file permissions must be correct. Be sure to reset them after you're done to prevent outside access to the log files and re-enable the 'shutdown' - (when PHP finishes executing script) - output buffer flush.<br />
 <?php
@@ -518,7 +765,7 @@ function mitt_er_options_page()
 	<input type="hidden" name="mitt_perms" value="<?php echo $mitt_perms; ?>" />
 <?php
 	if ( function_exists('wp_nonce_field') )
-		wp_nonce_field('error-reporting-toggle-permissions_' . $ernonce);
+		wp_nonce_field('error-reporting-toggle-permissions_' . $ernonce, '_mitt_er_tp');
 ?>
 	<div class="submit">
 		<input type="submit" name="toggle_permissions" value="Toggle Permissions" />
@@ -528,7 +775,7 @@ function mitt_er_options_page()
 	<form method="post" action="<?php echo $_SERVER["REQUEST_URI"]; ?>">
 <?php
 	if ( function_exists('wp_nonce_field') )
-		wp_nonce_field('error-reporting-delete-log-files_' . $ernonce);
+		wp_nonce_field('error-reporting-delete-log-files_' . $ernonce, '_mitt_er_dlf');
 
 	echo "Log Files in /er-logs folder:<br />";
 	$main_dir = "../er-logs";
@@ -607,16 +854,14 @@ function mitt_er_options_page()
 		<input type="submit" name="delete_log_files" value="Delete selected Log files" />
 	</div>
 	</form>
-	</div>
 
 <!-- /* CONFIGURATION SECTION */ -->
-	<div class="wrap">
-	<h2>Configuration</h2>
+	<h3>Configuration</h3>
 
 	<form method="post" action="<?php echo $_SERVER["REQUEST_URI"]; ?>">
 <?php
 	if ( function_exists('wp_nonce_field') )
-		wp_nonce_field('error-reporting-update-options_' . $ernonce);
+		wp_nonce_field('error-reporting-update-options_' . $ernonce, '_mitt_er_uo');
 ?>
 <!-- /* Log Options Fieldset */ -->
 	<fieldset class="er_options"> 
@@ -769,34 +1014,31 @@ function mitt_er_options_page()
 	</fieldset>
 
 	<div class="submit">
-		<input type="submit" name="update_options" value="<?php _e('Update options'); ?> &raquo;" />
+		<input type="submit" name="update_options" value="<?php _e('Update options'); ?>" />
 	</div>
 	</form>
-	<br />
 	<form method="post" action="<?php echo $_SERVER["REQUEST_URI"]; ?>">
 <?php
 	if ( function_exists('wp_nonce_field') )
-		wp_nonce_field('error-reporting-clear-options_' . $ernonce);
+		wp_nonce_field('error-reporting-clear-options_' . $ernonce, '_mitt_er_co');
 ?>
 	<div class="submit">
 		<input type="submit" name="clear_options" value="Clear Options" />
 	</div>
 	</form>
-	<br />
 	<form method="post" action="<?php echo $_SERVER["REQUEST_URI"]; ?>">
 <?php
 	if ( function_exists('wp_nonce_field') )
-		wp_nonce_field('error-reporting-restore-options_' . $ernonce);
+		wp_nonce_field('error-reporting-restore-options_' . $ernonce, '_mitt_er_ro');
 ?>
 	<div class="submit">
 		<input type="submit" name="restore_options" value="Restore Option Defaults" />
+		<p>Note: The Email Options default is to send notification of non-plugin folder E_WARNING errors.</p>
 	</div>
 	</form>
-	</div>
 
 <!-- /* OPTIONS SETTINGS LOGIC SECTION - EXAMPLE TABLES */ -->
-	<div class="wrap">
-	<h2>Option Settings Logic</h2>
+	<h3>Option Settings Logic</h3>
 	<table width="100%" border="0" cellspacing="0" cellpadding="6">
 	<tr>
 	<td valign="top">
@@ -1115,52 +1357,58 @@ function mitt_er_options_page()
 	</tr>
 <!-- add a "top 4 settings" row here when known -->
 	</table>
-	</div>
 
 <!-- /* PLUGIN INFORMATION SECTION */ -->
-	<div class="wrap">
-	<h2>Plugin Information</h2>
+	<h3>Plugin Information</h3>
 	<ul>
-	<li>Log Error Reporting<br />
+	<li><span class="er_pi_head">Ping Errors</span><br />
+If you do not want to see the widget on your dashboard, please go to dashboard's "Screen Options" and deselect "Ping Errors"<br />
+* Because a ping fails once, or even a few times, does not necessarily mean that it should be removed from your ping list. However, if one is repeatedly failing over a long period of time, it justifies investigation and possible removal.<br />
+The Ping Error feature is also available as a stand-alone plugin <a href='http://www.mittineague.com/dev/pw.php'>Ping Watcher</a><br />
+The two are not compatible and both can not be activated at the same time.</li>
+
+	<li><span class="er_pi_head">Log Error Reporting</span><br />
 Depending on where an error occurs, it will be logged to a er-logs folder that's either under the blog's installation folder, or under the wp-admin folder. New files are created for each day with names having the format "ER-dd-Mmm-yyyy.log"<br />
 eg. ER-05-Mar-2007.log</li>
 
-	<li>Email Error Reporting<br />
+	<li><span class="er_pi_head">Email Error Reporting</span><br />
 Email Error Reporting does not have a "no repeat errors" setting. This means that the blog administrator's email address will get an email for every reported error, every time.<br />
 For example, while testing this plugin using the default settings, 10 failed pings generated 190+ emails. It is strongly suggested that you "fine tune" your options using Log Error Reporting first (with the Repeat Error option set to yes to get an accurate indication of how many emails would have been sent) and get the errors down to a manageable amount before experimenting with the Email Error Reporting settings.<br />
 Be very careful setting these options. You could end up flooding the inbox with hundreds, and <strong>more likely thousands</strong>, of emails in a relatively short amount of time.<br />
 Note that the default Email Error Reporting settings are not enabled on install.</li>
 
-	<li>Error Types Options<br />
+	<li><span class="er_pi_head">Error Types Options</span><br />
 The Error Reporting plugin can report E-WARNING, E_NOTICE and E_STRICT errors.<br />
 Any E_RECOVERABLE_ERROR, and any "trigger" errors, E_USER_ERROR, E_USER_WARNING, and E_USER_NOTICE, will be reported if the option settings report "other error types" (see the "Option Settings Logic" section).<br />
 If you want to ensure that all error types are reported, check "Yes, All Error Types".<br />
 If you are interested in only certain error types "Include" them.<br />
 Conversely, if you specifically do not want an error type, "Exclude" it.</li>
 
-	<li>AND / OR Option<br />
+	<li><span class="er_pi_head">AND / OR Option</span><br />
 The AND / OR option setting will only matter if neither "Types" nor "Folders" are set to "All".<br />
 But, if both are either "Exclude" - "Include", it will make a big difference (see the "Option Settings Logic" section).</li>
 
-	<li>Folder Options<br />
+	<li><span class="er_pi_head">Folder Options</span><br />
 Errors in Files that are under the blog's install folder, and are not in the wp-admin, wp-content, or wp-includes folders, will be reported if the option settings report "other folders" (see the "Option Settings Logic" section).<br />
 Note that the plugins folder is inside the wp-content folder. It is presented as a separate option to allow for more precise control.<br />
 If the wp-content folder is included / excluded, so too will be the plugin folder with it. Likewise for any folders under the other folders.</li>
 
-	<li>Context and Repeat Errors Options<br />
+	<li><span class="er_pi_head">Context and Repeat Errors Options</span><br />
 Including the Context of the error may provide some helpful information, but as it adds significantly to the size of the log file, it is by default not included.<br />
 Likewise, there may be times when it would be helpful to see that a line of a file is causing the same error "X" amount of times, but because including Repeat errors would add significantly to the size of the log file, it too is by default not included.<br />
 Note that there is no repeat error option for Email Error Reporting.<br />
 Because each error will be sent as an individual email, the Context is not as crucial a setting here as it is for the Log options. So once you're sure you have the number of emails being sent under control, you may want to include it if that information will help you.</li>
 
-	<li>Timezone Option<br />
+	<li><span class="er_pi_head">Timezone Option</span><br />
 This value is initially set to the server's timezone and controls what time is used.<br />*Note* Requires PHP version 5+</li>
+
+	<li><span class="er_pi_head">Self Cleanup</span><br />
+Deactivating this plugin will remove the "Number of Ping Errors to Save" setting.<br />
+Uninstalling this plugin using the WordPress plugin list page's "delete" will remove the plugin's options from the wp-options table, including any saved ping errors, and all Log files and folders will be deleted.</li>
 	</ul>
-	</div>
 
 <!-- /* FURTHER INFORMATION SECTION */ -->
-	<div class="wrap">
-	<h2>Further Information</h2>
+	<h3>Further Information</h3>
 	<p>WANTED - Top 4 Settings<br />
 With all the possible option setting configurations, it's impossible to show examples of them all, but if you find one you really like, let me know and it may get included in a future version's "Top 4 settings" row.</p>
 	<p>WANTED - Bug Reports<br />
@@ -1174,6 +1422,35 @@ This plugin has been tested to ensure that representative settings work as expec
 /* ERROR HANDLER - REPORTING SECTION */
 function mitt_err_options($code, $msg, $file, $line, $context)
 {
+
+/* dashboard widget */
+if ( ($code == '2') && ( strpos($msg, 'fsockopen') !== FALSE ) && ( strpos($msg, 'connect') !== FALSE ) && ( strpos($file, 'class-IXR.php') !== FALSE ) )
+{
+	$blog_date_format = get_option('date_format');
+	$blog_time_format = get_option('time_format');
+	$both_format = $blog_date_format . ' ' . $blog_time_format;
+
+	$dash_info = str_replace("fsockopen() [<a href='function.fsockopen'>function.fsockopen</a>]: ", '', $msg);
+	$dash_info = str_replace('(', '<br />(', $dash_info);
+
+	$dash_info .= " ~ " . date($both_format, time()) . '<br />';
+
+	$ping_err_arr = get_option('mitt_er_ping_errors');
+	if ( !in_array($dash_info, $ping_err_arr) )
+	{
+		array_unshift($ping_err_arr, $dash_info);
+		$er_pe_arr_len = count($ping_err_arr);
+		$er_pe_len_setting = get_option('mitt_er_ping_error_length');
+		if ( $er_pe_arr_len > $er_pe_len_setting )
+		{
+			$ping_err_arr = array_slice($ping_err_arr, 0, $er_pe_len_setting);
+		}
+		update_option('mitt_er_ping_errors', $ping_err_arr);
+	}
+}
+
+
+
 /* get current option values for use */
 	$log_options = get_option('mitt_er_log');
 	$mitt_log_action = $log_options['log_action'];
@@ -1403,7 +1680,7 @@ function mitt_err_options($code, $msg, $file, $line, $context)
 			$info .= "\r\n";
 			$info .= "timed at " . date ('d-M-Y H:i:s', time());
 			$info .= "\r\n";
-			$info .=  print_r($log_context, TRUE);
+			$info .= $log_context;
 			$info .= "\r\n";
 
 			if ( (file_exists($mitt_path_file)) && (!is_readable($mitt_path_file)) )
@@ -1416,6 +1693,7 @@ function mitt_err_options($code, $msg, $file, $line, $context)
 			else
 			{
 				$fs = filesize($mitt_path_file);
+				if ( $fs <= 0 ) $fs = 1;
 				$file_data = fread($handle, $fs);
 				if( ($mitt_log_rpt == '1') || ( strpos($file_data, $msg) === FALSE ) )
 				{
@@ -1562,7 +1840,7 @@ function mitt_err_options($code, $msg, $file, $line, $context)
 
 		$email_cond_test = $email_lead_paren . $email_left_exp . $email_andor . $email_right_exp . $email_end_paren;
 
-//		if ( $mail_cond_test == '' ) $mail_cond_test = "1 == 1";
+		if ( $mail_cond_test == '' ) $mail_cond_test = "1 == 1";
 
 		if(eval("return $email_cond_test;"))
 		{
@@ -1575,7 +1853,7 @@ function mitt_err_options($code, $msg, $file, $line, $context)
 			$body .= "\r\n";
 			$body .= "timed at " . date ('d-M-Y H:i:s', time());
 			$body .= "\r\n";
-			$body .=  print_r($email_context, TRUE);
+			$body .= $email_context;
 
 			$doc_root = $_SERVER['DOCUMENT_ROOT'];
 			$sl_pos = strrpos($doc_root, '/');
@@ -1588,6 +1866,7 @@ function mitt_err_options($code, $msg, $file, $line, $context)
 		}
 	}
 	if ( (function_exists('date_default_timezone_set')) && ($serv_tz != 'This_option_requires_PHP_ver5+') ) date_default_timezone_set($serv_tz);
+	return false;
 }
 
 function mitt_err_handler()
@@ -1598,8 +1877,9 @@ function mitt_err_handler()
 if (function_exists('add_action'))
 {
 	add_action('init', 'mitt_err_handler');
-	add_action('admin_head', 'mitt_er_css');
+	add_action('admin_init', 'mitt_er_admin_init');
 	add_action('admin_menu', 'mitt_add_er_page');
+	add_action('wp_dashboard_setup', 'add_er_dashboard_widget');
 }
 
 if (function_exists('register_activation_hook'))
@@ -1607,4 +1887,13 @@ if (function_exists('register_activation_hook'))
 	register_activation_hook( __FILE__, 'mitt_er_activate' );
 }
 
+if (function_exists('register_deactivation_hook'))
+{
+	register_deactivation_hook( __FILE__, 'mitt_er_deactivate');
+}
+
+if (function_exists('register_uninstall_hook'))
+{
+	register_uninstall_hook( __FILE__, 'mitt_er_uninstall');
+}
 ?>

@@ -1,6 +1,6 @@
 === Error Reporting ===
 Contributors: Mittineague
-Tags: error reporting, log errors, email errors
+Tags: error reporting, log errors, email errors, ping errors
 Requires at least: unknown
 Tested up to: 2.7
 Stable tag: Trunk
@@ -9,6 +9,16 @@ Stable tag: Trunk
 Released under the terms of the GNU General Public License.  
 
 == Version History ==
+Beta 0.10.0 ??-???-2009  
+- added ping error - dashboard widget code  
+- added self-cleanup hooks  
+- removed deprecated option descriptions  
+- nonce tweaks  
+- removed print_ r $context  
+- added return false  
+- changed admin CSS hook  
+- removed fail returns from handler  
+
 Beta 0.9.6 15-Mar-2009  
 - fixed uninitialized variables  
 - fixed 'all types' 'all folders' bug  
@@ -48,15 +58,23 @@ Beta 0.9.1 29-Mar-2007
 Beta 0.9.0 28-Mar-2007  
 
 == Description ==
-Logs Errors to files and / or Sends Error Notification emails.  
+Logs Errors to files and / or Sends Error Notification emails. Records Ping Errors and displays them in a dashboard widget.
+  
 
 == Long Description ==
 
 It is the hope that the Error Reporting plugin will prove to be a valuable tool for the WordPress developer. Highly customizable settings allow for the ability to locate various types of both native WordPress Core errors, and plugin and theme errors. Errors can be handled by logging to files and/or by email notification. The Error Reporting plugin can help identify problems during plugin development, and can help in both locating and keeping aware of errors in a live blog.  
+The Ping Errors feature can catch up to 100 ping errors. These are displayed in both a dashboard widget and on the plugin's Settings page. Great for tracking repeated ping failures so you can clean up your ping list.  
+
+Ping Errors  
+If you do not want to see the widget on your dashboard, please go to dashboard's "Screen Options" and deselect "Ping Errors"  
+* Because a ping fails once, or even a few times, does not necessarily mean that it should be removed from your ping list. However, if one is repeatedly failing over a long period of time, it justifies investigation and possible removal.  
+The Ping Error feature is also available as a stand-alone plugin [Ping Watcher](http://www.mittineague.com/dev/pw.php)
+The two are not compatible and both can not be activated at the same time.  
 
 Log Error Reporting  
-Depending on where an error occurs, it will be logged to a wp-logs folder that's either under the blog's installation folder, or under the wp-admin folder. New files are created for each day with names having the format "WP-dd-Mmm-yyyy.log"  
-eg. WP-05-Mar-2007.log  
+Depending on where an error occurs, it will be logged to a wp-logs folder that's either under the blog's installation folder, or under the wp-admin folder. New files are created for each day with names having the format "ER-dd-Mmm-yyyy.log"  
+eg. ER-05-Mar-2009.log  
 
 Email Error Reporting  
 Email Error Reporting does not have a "no repeat errors" setting. This means that the blog administrator's email address will get an email for every reported error, every time.  
@@ -89,8 +107,12 @@ Because each error will be sent as an individual email, the Context is not as cr
 Timezone Option  
 This value is initially set to the server's timezone and controls what time is used. This option requires PHP ver 5+  
 
+Self Cleanup  
+Deactivating this plugin will remove the "Number of Ping Errors to Save" setting.  
+Uninstalling this plugin using the WordPress plugin list page's "delete" will remove the plugin's options from the wp-options table, including any saved ping errors, and all Log files and folders will be deleted.  
+
 == Option Settings Logic ==
-Please see screenshot-2.jpg or the plugin's ACP Options page for visual explanation by example.  
+Please see screenshot-2.jpg or the plugin's ACP Settings page for visual explanation by example.  
 
 == Log Files ==
 Provides links to the log files for viewing / saving, and a way to delete them.  
@@ -100,7 +122,7 @@ Please remember to toggle permissions back to secure to prevent direct HTTP acce
 == Installation ==
 1. Upload 'errorreporting.php' to the '/wp-content/plugins/' directory  
 2. Activate the plugin through the 'Plugins' menu in WordPress  
-3. Click the 'Options' admin menu link, and select 'ErrorReporting'  
+3. Click the 'Options'/'Settings' admin menu link, and select 'ErrorReporting'  
 4. Configure the options  
 
 == Frequently Asked Questions ==
@@ -124,6 +146,10 @@ Needless to say, I have not verified that all of them work correctly. If you hav
 2. Option Settings Logic
 
 3. Log Files
+
+4. Ping Errors
+
+5. Dashboard Widget
 
 == More Info ==
 For more info, please visit the plugin's page  
