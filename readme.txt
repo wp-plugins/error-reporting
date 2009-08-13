@@ -50,7 +50,7 @@ Released under the terms of the GNU General Public License.
 * minor mark-up and info edits  
 
 = Beta 0.9.2 30-Mar-2007 =  
-* Security improvements  
+* Security improvements
   - made wp-log folders / files not world readable  
   - added nonces to form actions  
 * minor GUI changes  
