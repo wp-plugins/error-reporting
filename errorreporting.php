@@ -3,13 +3,18 @@
 Plugin Name: Error Reporting
 Plugin URI: http://www.mittineague.com/dev/er.php
 Description: Logs Errors to file and/or Sends Error Notification emails. Records Ping Errors and displays them in a dashboard widget.
-Version: Beta 0.10.0
+Version: Beta 0.10.1
 Author: Mittineague
 Author URI: http://www.mittineague.com
 */
 
 /*
 * Change Log
+*
+* ver. Beta 0.10.1 13-Aug-2009
+* - skip SimplePie errors for now
+* - capability check
+* - changed Version History to Changelog in readme
 * 
 * ver. Beta 0.10.0 01-Apr-2009
 * - added ping error - dashboard widget code
@@ -234,7 +239,10 @@ function mitt_er_dashboard_widget()
 
 function add_er_dashboard_widget()
 {
-	wp_add_dashboard_widget('mitt_er_ping_error_widget', 'Ping Errors', 'mitt_er_dashboard_widget');	
+	if (function_exists('wp_add_dashboard_widget'))
+	{
+		wp_add_dashboard_widget('mitt_er_ping_error_widget', 'Ping Errors', 'mitt_er_dashboard_widget');
+	}
 } 
 
 function mitt_er_css()
@@ -315,6 +323,9 @@ function mitt_er_options_page()
 	global $ernonce;
 
 	$max_ping_saves = 100;	// arbitrary number
+
+	if ( function_exists('current_user_can') && !current_user_can('manage_options') ) die;
+
 	register_setting('mitt-er-poptions', 'mitt_er_pe_len', 'absint');
 
 	if ( isset($_POST['mitt_update_erp']) )
@@ -593,6 +604,11 @@ function mitt_er_options_page()
 /* Toggle Permissions Section */
 	if (isset($_POST['toggle_permissions']))
 	{
+?>
+		<div id="message" class="updated fade">
+			<p><strong>The Folder and File Permissions have changed.</strong></p>
+		</div>
+<?php
 		check_admin_referer('error-reporting-toggle-permissions_' . $ernonce, '_mitt_er_tp');
 		if( ($_POST['mitt_perms'] == 'secure') || ($_POST['mitt_perms'] == '') )
 		{
@@ -857,7 +873,7 @@ function mitt_er_options_page()
 
 <!-- /* CONFIGURATION SECTION */ -->
 	<h3>Configuration</h3>
-
+	<p>Note* Because the SimplePie file throws too many errors, i.e. calling non-static methods statically and passing new by reference, which can cause Internal Server errors, E_STRICT errors from the class-simplepie.php file are not included in any reports.</p>
 	<form method="post" action="<?php echo $_SERVER["REQUEST_URI"]; ?>">
 <?php
 	if ( function_exists('wp_nonce_field') )
@@ -1422,10 +1438,16 @@ This plugin has been tested to ensure that representative settings work as expec
 /* ERROR HANDLER - REPORTING SECTION */
 function mitt_err_options($code, $msg, $file, $line, $context)
 {
+/* The SimplePie file throws too many E_STRICT errors and causes Internal Server errors */
+	if ( ($code == '2048') && ( strpos($file, 'class-simplepie.php') !== FALSE ) )
+	{
+		return false;
+	}
 
 /* dashboard widget */
 if ( ($code == '2') && ( strpos($msg, 'fsockopen') !== FALSE ) && ( strpos($msg, 'connect') !== FALSE ) && ( strpos($file, 'class-IXR.php') !== FALSE ) )
 {
+
 	$blog_date_format = get_option('date_format');
 	$blog_time_format = get_option('time_format');
 	$both_format = $blog_date_format . ' ' . $blog_time_format;
@@ -1657,7 +1679,7 @@ if ( ($code == '2') && ( strpos($msg, 'fsockopen') !== FALSE ) && ( strpos($msg,
 
 		$log_cond_test = $log_lead_paren . $log_left_exp . $log_andor . $log_right_exp . $log_end_paren;
 
-		if ( $log_cond_test == '' ) $log_cond_test = "1 == 1";
+		if ( $log_cond_test == '' ) $log_cond_test = "(1 == 1)";
 
 		if(eval("return $log_cond_test;"))
 		{
@@ -1706,7 +1728,7 @@ if ( ($code == '2') && ( strpos($msg, 'fsockopen') !== FALSE ) && ( strpos($msg,
 			chmod($mitt_path_file, 0600);
 			fclose($handle);
 			clearstatcache();
-			}			
+			}
 		}
 	}
 

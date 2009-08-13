@@ -1,72 +1,81 @@
-=== Error Reporting ===
-Contributors: Mittineague
-Tags: error reporting, log errors, email errors, ping errors
-Requires at least: unknown
-Tested up to: 2.7
-Stable tag: Trunk
+=== Error Reporting ===  
+Contributors: Mittineague  
+Tags: error reporting, log errors, email errors, ping errors  
+Requires at least: unknown  
+Tested up to: 2.8.4  
+Stable tag: Trunk  
 
-== License ==
+== License ==  
 Released under the terms of the GNU General Public License.  
 
-== Version History ==
-Beta 0.10.0 01-Apr-2009  
-- added ping error - dashboard widget code  
-- added self-cleanup hooks  
-- removed deprecated option descriptions  
-- nonce tweaks  
-- removed print_ r $context  
-- added return false  
-- changed admin CSS hook  
-- removed fail returns from handler  
+== Changelog ==  
 
-Beta 0.9.6 15-Mar-2009  
-- fixed uninitialized variables  
-- fixed 'all types' 'all folders' bug  
-- remove/add 'shutdown' action  
-- added label tags  
-- friendlier CSS selectors  
-- added 'register_ activation_ hook'  
+= Beta 0.10.1 13-Aug-2009 =  
+* skip SimplePie errors for now  
+* capability check  
+* changed Version History to Changelog in readme  
 
-Beta 0.9.5 27-Jan-2009  
-- changed mktime() to time()  
-- "info" link fix  
-- replaced "short tags"  
-- changed 'wp'logs to 'er'logs  
-- added javascript select/deselect all  
+= Beta 0.10.0 01-Apr-2009 =  
+* added ping error - dashboard widget code  
+* added self-cleanup hooks  
+* removed deprecated option descriptions  
+* nonce tweaks  
+* removed print_ r $context  
+* added return false  
+* changed admin CSS hook  
+* removed fail returns from handler  
 
-Beta 0.9.4 10-Apr-2007  
-- made date_ default_ timezone_ get/set OK for PHP < ver. 5  
+= Beta 0.9.6 15-Mar-2009 =  
+* fixed uninitialized variables  
+* fixed 'all types' 'all folders' bug  
+* remove/add 'shutdown' action  
+* added label tags  
+* friendlier CSS selectors  
+* added 'register_ activation_ hook'  
 
-Beta 0.9.3 09-Apr-2007  
-- removed error_ log from Log block fopen-fwrite fails  
-- added natsort to log file display  
-- rearranged page sections  
-- minor mark-up and info edits  
+= Beta 0.9.5 27-Jan-2009 =  
+* changed mktime() to time()  
+* "info" link fix  
+* replaced "short tags"  
+* changed 'wp'logs to 'er'logs  
+* added javascript select/deselect all  
 
-Beta 0.9.2 30-Mar-2007  
-- Security improvements  
-- - made wp-log folders / files not world readable  
-- - added nonces to form actions  
-- minor GUI changes  
-- added error_ log to Log block fopen-fwrite fails  
+= Beta 0.9.4 10-Apr-2007 =  
+* made date_ default_ timezone_ get/set OK for PHP < ver. 5  
 
-Beta 0.9.1 29-Mar-2007  
-- fixed buggy conditional generating code block  
-- added info re E_ RECOVERABLE_ ERROR  
-- added chmod to fix annoying sporadic permission resets  
+= Beta 0.9.3 09-Apr-2007 =  
+* removed error_ log from Log block fopen-fwrite fails  
+* added natsort to log file display  
+* rearranged page sections  
+* minor mark-up and info edits  
 
-Beta 0.9.0 28-Mar-2007  
+= Beta 0.9.2 30-Mar-2007 =  
+* Security improvements  
+* - made wp-log folders / files not world readable  
+* - added nonces to form actions  
+* minor GUI changes  
+* added error_ log to Log block fopen-fwrite fails  
 
-== Description ==
+= Beta 0.9.1 29-Mar-2007 =  
+* fixed buggy conditional generating code block  
+* added info re E_ RECOVERABLE_ ERROR  
+* added chmod to fix annoying sporadic permission resets  
+
+= Beta 0.9.0 28-Mar-2007 =  
+* initial release  
+
+== Description ==  
 Logs Errors to files and / or Sends Error Notification emails. Records Ping Errors and displays them in a dashboard widget.
   
 
-== Long Description ==
+== Long Description ==  
 
 It is the hope that the Error Reporting plugin will prove to be a valuable tool for the WordPress developer. Highly customizable settings allow for the ability to locate various types of both native WordPress Core errors, and plugin and theme errors. Errors can be handled by logging to files and/or by email notification. The Error Reporting plugin can help identify problems during plugin development, and can help in both locating and keeping aware of errors in a live blog.  
 The Ping Errors feature can catch up to 100 ping errors. These are displayed in both a dashboard widget and on the plugin's Settings page. Great for tracking repeated ping failures so you can clean up your ping list.  
 
 Ping Errors  
+The Ping Errors feature works independently from Log Errors and Email Errors. That is, it can be enabled even if one or both of the others are not enabled.  
+
 If you do not want to see the widget on your dashboard, please go to dashboard's "Screen Options" and deselect "Ping Errors"  
 * Because a ping fails once, or even a few times, does not necessarily mean that it should be removed from your ping list. However, if one is repeatedly failing over a long period of time, it justifies investigation and possible removal.  
 The Ping Error feature is also available as a stand-alone plugin [Ping Watcher](http://www.mittineague.com/dev/pw.php)
@@ -74,7 +83,7 @@ The two are not compatible and both can not be activated at the same time.
 
 Log Error Reporting  
 Depending on where an error occurs, it will be logged to a wp-logs folder that's either under the blog's installation folder, or under the wp-admin folder. New files are created for each day with names having the format "ER-dd-Mmm-yyyy.log"  
-eg. ER-05-Mar-2009.log  
+eg. ER-13-Aug-2009.log  
 
 Email Error Reporting  
 Email Error Reporting does not have a "no repeat errors" setting. This means that the blog administrator's email address will get an email for every reported error, every time.  
@@ -111,47 +120,47 @@ Self Cleanup
 Deactivating this plugin will remove the "Number of Ping Errors to Save" setting.  
 Uninstalling this plugin using the WordPress plugin list page's "delete" will remove the plugin's options from the wp-options table, including any saved ping errors, and all Log files and folders will be deleted.  
 
-== Option Settings Logic ==
+== Option Settings Logic ==  
 Please see screenshot-2.jpg or the plugin's ACP Settings page for visual explanation by example.  
 
-== Log Files ==
+== Log Files ==  
 Provides links to the log files for viewing / saving, and a way to delete them.  
 Note that they must be temporarily toggled to insecure to access them. Because a native WordPress Core error will reset the permissions if the plugin is set to "E_ NOTICE" and "wp-include", the 'shutdown' action hook is also removed.  
 Please remember to toggle permissions back to secure to prevent direct HTTP access to the files and re-enable the output buffer flush as not doing so may result in a security risk and possible PHP memory problems.  
 
-== Installation ==
+== Installation ==  
 1. Upload 'errorreporting.php' to the '/wp-content/plugins/' directory  
 2. Activate the plugin through the 'Plugins' menu in WordPress  
 3. Click the 'Options'/'Settings' admin menu link, and select 'ErrorReporting'  
 4. Configure the options  
 
-== Frequently Asked Questions ==
+== Frequently Asked Questions ==  
 
-= How should I configure the options for "X" error types and "X" folders? =
+= How should I configure the options for "X" error types and "X" folders? =  
 
 There are too many possibilities to show them all in the Option Settings Logic section.  
 Hopefully the examples will provide enough insight so that you can figure out what you need for what you want.  
 And if you're unsure, Please, Please, Please, experiment with the settings for Log Options, NOT the Email Options.  
 But, that said, if enough people recommend or inquire about a particular configuration, it may just make it in a future version's "Top 4 settings" row. :)  
 
-= How can I help? =
+= How can I help? =  
 
 A rough estimate of all the possible different option configuations, not taking into account for different settings producing the same result, is 4,420.  
 Needless to say, I have not verified that all of them work correctly. If you have trouble with any settings not working as expected, please contact me.  
 
-== Screenshots ==
+== Screenshots ==  
 
-1. Email Options
+1. Email Options  
 
-2. Option Settings Logic
+2. Option Settings Logic  
 
-3. Log Files
+3. Log Files  
 
-4. Ping Errors
+4. Ping Errors  
 
-5. Dashboard Widget
+5. Dashboard Widget  
 
-== More Info ==
+== More Info ==  
 For more info, please visit the plugin's page  
 [Error Reporting](http://www.mittineague.com/dev/er.php)  
 
