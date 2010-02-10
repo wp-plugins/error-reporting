@@ -3,14 +3,19 @@
 Plugin Name: Error Reporting
 Plugin URI: http://www.mittineague.com/dev/er.php
 Description: Logs Errors to file and/or Sends Error Notification emails. Records Ping Errors and displays them in a dashboard widget.
-Version: Beta 0.10.1
+Version: 1.0.0 RC
 Author: Mittineague
 Author URI: http://www.mittineague.com
 */
 
 /*
 * Change Log
-*
+* 
+* ver. 1.0.0 RC 09-Feb-2010
+* - replaced deprecated user_role
+* - auto delete old log files feature
+* - minor tweaks
+* 
 * ver. Beta 0.10.1 13-Aug-2009
 * - skip SimplePie errors for now
 * - capability check
@@ -145,19 +150,29 @@ function mitt_er_activate()
 
 	$mitt_er_pe_len = 25;
 	add_option('mitt_er_ping_error_length', $mitt_er_pe_len);
+
+	add_option('er_do_cron_del', 'never');
+	wp_schedule_event(time(), 'daily', 'er_cron_del_hook');
 }
 
 function mitt_er_deactivate()
 {
-		remove_action('init', 'mitt_err_handler');
-		remove_action('admin_menu', 'mitt_add_er_page');
-		remove_action('wp_dashboard_setup', 'add_er_dashboard_widget');
-		delete_option('mitt_er_ping_error_length');
+	remove_action('init', 'mitt_err_handler');
+	remove_action('admin_init', 'mitt_er_admin_init');
+	remove_action('admin_menu', 'mitt_add_er_page');
+	remove_action('wp_dashboard_setup', 'add_er_dashboard_widget');
+	delete_option('mitt_er_ping_error_length');
+
+	wp_clear_scheduled_hook('er_cron_del_hook');
+	remove_action('er_cron_del_hook', 'er_cron_delete_logs');
+
+	restore_error_handler();
 }
 
+/* remove ALL error log files when plugin is uninstalled */
 function mitt_remove_log_files()
 {
-	$guardian = '/^[\.]{1,2}\/er-logs\/ER-[0-3][0-9]-[ADFJMNOS][abceglnoprtuvy]{2}-20[0-9]{2}\.log$/';
+	$guardian = '/^ER-[0-3][0-9]-[ADFJMNOS][abceglnoprtuvy]{2}-20[0-9]{2}\.log$/';
 
 	$main_dir = "../er-logs";
 	if ( is_dir($main_dir) )
@@ -187,12 +202,11 @@ function mitt_remove_log_files()
 		exec("chmod 604 " . $admin_dir . "/*.log");
 
 		$open_dir2 = opendir($admin_dir);
-		$incrementer2 = 0;
 		while (false !== ($file2 = readdir($open_dir2)))
 		{
 			if ($file2 != "." && $file2 != "..")
 			{
-				if(preg_match($guardian, $file))
+				if(preg_match($guardian, $file2))
 				{
 				      unlink($admin_dir . "/" . $file2);
 				}
@@ -209,6 +223,7 @@ function mitt_er_uninstall()
 	delete_option('mitt_er_email');
 	delete_option('mitt_er_tz');
 	delete_option('mitt_er_ping_errors');
+	delete_option('er_do_cron_del');
 	mitt_remove_log_files();		
 }
 
@@ -243,7 +258,76 @@ function add_er_dashboard_widget()
 	{
 		wp_add_dashboard_widget('mitt_er_ping_error_widget', 'Ping Errors', 'mitt_er_dashboard_widget');
 	}
-} 
+}
+
+
+/* CRON Auto Delete old error log files */
+function er_cron_delete_logs()
+{
+	$cron_del_limiter = get_option('er_do_cron_del');
+
+	if ( ($cron_del_limiter == 'month') || ($cron_del_limiter == 'week') )
+	{
+		$curr_time = time();
+		$cron_file_age = 31536000; // default 1 year should be way more than enough
+
+		if ($cron_del_limiter == 'month') $cron_file_age = 2678400;
+		if ($cron_del_limiter == 'week') $cron_file_age = 604800;
+
+		$guardian = '/^ER-[0-3][0-9]-[ADFJMNOS][abceglnoprtuvy]{2}-20[0-9]{2}\.log$/';
+
+		$main_dir = "./er-logs";
+		if ( is_dir($main_dir) )
+		{
+			chmod($main_dir, 0705);
+			exec("chmod 604 " . $main_dir . "/*.log");
+
+			$open_dir = opendir($main_dir);
+			while (false !== ($file = readdir($open_dir)))
+			{
+				if ($file != "." && $file != "..")
+				{
+					$last_mod = filemtime('./er-logs/' . $file);
+					$passed_time = $curr_time - $last_mod;
+
+					if( (preg_match($guardian, $file)) && ($passed_time > $cron_file_age) )
+					{
+ 				      	unlink($main_dir . "/" . $file);
+					}
+				}
+			}
+			exec("chmod 600 " . $main_dir . '/*.log');
+			chmod($main_dir, 0700);
+			closedir($open_dir);
+		}
+
+		$admin_dir = "./wp-admin/er-logs";
+		if ( is_dir($admin_dir) )
+		{
+			chmod($admin_dir, 0705);
+			exec("chmod 604 " . $admin_dir . "/*.log");
+
+			$open_dir2 = opendir($admin_dir);
+			while (false !== ($file2 = readdir($open_dir2)))
+			{
+				if ($file2 != "." && $file2 != "..")
+				{
+					$last_mod2 = filemtime('./wp-admin/er-logs/' . $file2);
+					$passed_time2 = $curr_time - $last_mod2;
+
+					if( (preg_match($guardian, $file2)) && ($passed_time2 > $cron_file_age) )
+					{
+ 					      unlink($admin_dir . "/" . $file2);
+					}
+				}
+			}
+			exec("chmod 600 " . $admin_dir . '/*.log');
+			chmod($admin_dir, 0700);
+			closedir($open_dir2);
+		}
+		clearstatcache();
+	}
+}
 
 function mitt_er_css()
 {
@@ -312,7 +396,7 @@ function mitt_add_er_page()
 {
 	if (function_exists('add_options_page'))
 	{
-		$mitt_er_op = add_options_page('Error Reporting Options', 'ErrorReporting', 8, basename(__FILE__), 'mitt_er_options_page');
+		$mitt_er_op = add_options_page('Error Reporting Options', 'ErrorReporting', 'manage_options', basename(__FILE__), 'mitt_er_options_page');
 		add_action("admin_head-$mitt_er_op", 'mitt_er_css');
 	}
 	$ernonce = md5('errorreporting');
@@ -324,7 +408,7 @@ function mitt_er_options_page()
 
 	$max_ping_saves = 100;	// arbitrary number
 
-	if ( function_exists('current_user_can') && !current_user_can('manage_options') ) die;
+	if ( function_exists('current_user_can') && !current_user_can('manage_options') ) exit;
 
 	register_setting('mitt-er-poptions', 'mitt_er_pe_len', 'absint');
 
@@ -372,34 +456,34 @@ function mitt_er_options_page()
 	{
 		check_admin_referer('error-reporting-clear-options_' . $ernonce, '_mitt_er_co');
 
-		$clr_log_opts = array();
-		$clr_log_opts['log_action'] = '0';
-		$clr_log_opts['log_type_mode'] = '';
-		$clr_log_opts['log_type_W'] = '0';
-		$clr_log_opts['log_type_N'] = '0';
-		$clr_log_opts['log_type_S'] = '0';
-		$clr_log_opts['log_andor'] = '';
-		$clr_log_opts['log_fold_mode'] = '';
-		$clr_log_opts['log_fold_A'] = '0';
-		$clr_log_opts['log_fold_C'] = '0';
-		$clr_log_opts['log_fold_P'] = '0';
-		$clr_log_opts['log_fold_I'] = '0';
-		$clr_log_opts['log_cont'] = '';
-		$clr_log_opts['log_rpt'] = '';
+		$clr_log_opts = array('log_action' => '0',
+					'log_type_mode' => '',
+					'log_type_W' => '0',
+					'log_type_N' => '0',
+					'log_type_S' => '0',
+					'log_andor' => '',
+					'log_fold_mode' => '',
+					'log_fold_A' => '0',
+					'log_fold_C' => '0',
+					'log_fold_P' => '0',
+					'log_fold_I' => '0',
+					'log_cont' => '',
+					'log_rpt' => '',
+					);
 
-		$clr_email_opts = array();
-		$clr_email_opts['email_action'] = '0';
-		$clr_email_opts['email_type_mode'] = '';
-		$clr_email_opts['email_type_W'] = '0';
-		$clr_email_opts['email_type_N'] = '0';
-		$clr_email_opts['email_type_S'] = '0';
-		$clr_email_opts['email_andor'] = '';
-		$clr_email_opts['email_fold_mode'] = '';
-		$clr_email_opts['email_fold_A'] = '0';
-		$clr_email_opts['email_fold_C'] = '0';
-		$clr_email_opts['email_fold_P'] = '0';
-		$clr_email_opts['email_fold_I'] = '0';
-		$clr_email_opts['email_cont'] = '';
+		$clr_email_opts = array('email_action' => '0',
+					'email_type_mode' => '',
+					'email_type_W' => '0',
+					'email_type_N' => '0',
+					'email_type_S' => '0',
+					'email_andor' => '',
+					'email_fold_mode' => '',
+					'email_fold_A' => '0',
+					'email_fold_C' => '0',
+					'email_fold_P' => '0',
+					'email_fold_I' => '0',
+					'email_cont' => '',
+					);
 
 		update_option('mitt_er_log', $clr_log_opts);
 		update_option('mitt_er_email', $clr_email_opts);
@@ -414,34 +498,34 @@ function mitt_er_options_page()
 	{
 		check_admin_referer('error-reporting-restore-options_' . $ernonce, '_mitt_er_ro');
 
-		$rstr_log_opts = array();
-		$rstr_log_opts['log_action'] = '1';
-		$rstr_log_opts['log_type_mode'] = 'exc';
-		$rstr_log_opts['log_type_W'] = '0';
-		$rstr_log_opts['log_type_N'] = '1';
-		$rstr_log_opts['log_type_S'] = '1';
-		$rstr_log_opts['log_andor'] = 'or';
-		$rstr_log_opts['log_fold_mode'] = 'exc';
-		$rstr_log_opts['log_fold_A'] = '0';
-		$rstr_log_opts['log_fold_C'] = '0';
-		$rstr_log_opts['log_fold_P'] = '1';
-		$rstr_log_opts['log_fold_I'] = '0';
-		$rstr_log_opts['log_cont'] = '0';
-		$rstr_log_opts['log_rpt'] = '0';
+		$rstr_log_opts = array('log_action' => '1',
+					'log_type_mode' => 'exc',
+					'log_type_W' => '0',
+					'log_type_N' => '1',
+					'log_type_S' => '1',
+					'log_andor' => 'or',
+					'log_fold_mode' => 'exc',
+					'log_fold_A' => '0',
+					'log_fold_C' => '0',
+					'log_fold_P' => '1',
+					'log_fold_I' => '0',
+					'log_cont' => '0',
+					'log_rpt' => '0',
+					);
 
-		$rstr_email_opts = array();
-		$rstr_email_opts['email_action'] = '1';
-		$rstr_email_opts['email_type_mode'] = 'exc';
-		$rstr_email_opts['email_type_W'] = '0';
-		$rstr_email_opts['email_type_N'] = '1';
-		$rstr_email_opts['email_type_S'] = '1';
-		$rstr_email_opts['email_andor'] = 'and';
-		$rstr_email_opts['email_fold_mode'] = 'exc';
-		$rstr_email_opts['email_fold_A'] = '0';
-		$rstr_email_opts['email_fold_C'] = '0';
-		$rstr_email_opts['email_fold_P'] = '1';
-		$rstr_email_opts['email_fold_I'] = '0';
-		$rstr_email_opts['email_cont'] = '0';
+		$rstr_email_opts = array('email_action' => '1',
+					'email_type_mode' => 'exc',
+					'email_type_W' => '0',
+					'email_type_N' => '1',
+					'email_type_S' => '1',
+					'email_andor' => 'and',
+					'email_fold_mode' => 'exc',
+					'email_fold_A' => '0',
+					'email_fold_C' => '0',
+					'email_fold_P' => '1',
+					'email_fold_I' => '0',
+					'email_cont' => '0',
+					);
 
 		update_option('mitt_er_log', $rstr_log_opts);
 		update_option('mitt_er_email', $rstr_email_opts);
@@ -601,6 +685,20 @@ function mitt_er_options_page()
 		</strong></p></div>
 <?php
 	}
+
+/* Update Cron Delete Section */
+	if (isset($_POST['mitt_sched_cron']))
+	{
+		check_admin_referer('error-reporting-cron-schedule_' . $ernonce, '_mitt_er_cs');
+
+		if ( isset($_POST['er_do_cron']) && ( ($_POST['er_do_cron'] == 'never') || ($_POST['er_do_cron'] == 'month') || ($_POST['er_do_cron'] == 'week') ) ) {
+			update_option('er_do_cron_del', $_POST['er_do_cron']);
+?>
+		<div id="message" class="updated fade"><p><strong>The Auto Delete Settings have been changed.</strong></p></div>
+<?php
+		}
+	}
+
 /* Toggle Permissions Section */
 	if (isset($_POST['toggle_permissions']))
 	{
@@ -626,7 +724,7 @@ function mitt_er_options_page()
 				exec("chmod 604 " . $admin_dir . '/*.log');
 			}
 			clearstatcache();
-			$mitt_perms = 'NOTsecure';
+			$mitt_perms = 'NOT secure';
 			remove_action( 'shutdown', 'wp_ob_end_flush_all', 1);
 		}
 		else
@@ -680,6 +778,9 @@ function mitt_er_options_page()
 	$mitt_email_cont = $email_options['email_cont'];
 
 	$mitt_er_tz = get_option('mitt_er_tz');
+
+	$mitt_er_do_cron_del = get_option('er_do_cron_del');
+
 ?>
 	<div class="wrap">
 	<h2>Error Reporting</h2>
@@ -762,14 +863,14 @@ function mitt_er_options_page()
 	<p>To access a file, the folder and file permissions must be correct. Be sure to reset them after you're done to prevent outside access to the log files and re-enable the 'shutdown' - (when PHP finishes executing script) - output buffer flush.<br />
 <?php
 	$mitt_perms = (!empty($mitt_perms)) ? $mitt_perms : '';
-	if ( ($mitt_perms == 'secure') || ($mitt_perms == 'NOTsecure') )
+	if ( ($mitt_perms == 'secure') || ($mitt_perms == 'NOT secure') )
 	{
 		$obf = '';
 		if ($mitt_perms == 'secure')
 		{
 			$obf = 'enabled';
 		}
-		else if ($mitt_perms == 'NOTsecure')
+		else if ($mitt_perms == 'NOT secure')
 		{
 			$obf = 'disabled';
 		}
@@ -811,10 +912,11 @@ function mitt_er_options_page()
 		closedir($open_dir);
 	}
 	natsort($logfiles_arr);
+
 	foreach($logfiles_arr as $logfile)
 	{
 		echo "<input name='prune_logs[]' type='checkbox' value='../er-logs/" . $logfile . "' />&nbsp;&nbsp;&nbsp;&nbsp;";
-		echo "<a href='../er-logs/" . $logfile . "'>" . $logfile . "</a> (" . number_format(filesize('../er-logs/' . $logfile)) . " bytes)<br />";
+		echo "<a href='../er-logs/" . $logfile . "'>" . $logfile . "</a> (" . number_format(filesize('../er-logs/' . $logfile)) . " bytes) <br />";
 	}
 	if(empty($logfiles_arr))
 	{
@@ -839,10 +941,11 @@ function mitt_er_options_page()
 		closedir($open_dir2);
 	}
 	natsort($logfiles_arr2);
+
 	foreach($logfiles_arr2 as $logfile2)
 	{
 		echo "<input name='prune_logs[]' type='checkbox' value='./er-logs/" . $logfile2 . "' />&nbsp;&nbsp;&nbsp;&nbsp;";
-		echo "<a href='./er-logs/" . $logfile2 . "'>" . $logfile2 . "</a> (" . number_format(filesize('./er-logs/' . $logfile2)) . " bytes)<br />";
+		echo "<a href='./er-logs/" . $logfile2 . "'>" . $logfile2 . "</a> (" . number_format(filesize('./er-logs/' . $logfile2)) . " bytes) <br />";
 	}
 	if(empty($logfiles_arr2))
 	{
@@ -870,6 +973,32 @@ function mitt_er_options_page()
 		<input type="submit" name="delete_log_files" value="Delete selected Log files" />
 	</div>
 	</form>
+
+<!-- /* CRON LOG FILE DELETE SECTION */ -->
+	<div class="postbox">
+		<h4>Auto Delete Old Log Files</h4>
+		<div class="inside">
+			<form method="post" action="<?php echo $_SERVER["REQUEST_URI"]; ?>">
+<?php
+	if ( function_exists('wp_nonce_field') )
+		wp_nonce_field('error-reporting-cron-schedule_' . $ernonce, '_mitt_er_cs');
+?>
+
+		<p>Using this option will routinely remove older log files without requiring your attention.<br />
+		Note: A "Month" is 31 days.</p>
+
+<input id="er_do_cron_no" name="er_do_cron" type="radio" value='never' <?php if ($mitt_er_do_cron_del == 'never') {echo 'checked="checked"';} ?> /> <label for="er_do_cron_no">No, Don't Auto Delete any log files</label><br />
+
+<input id="er_do_cron_month" name="er_do_cron" type="radio" value='month' <?php if ($mitt_er_do_cron_del == 'month') {echo 'checked="checked"';} ?> /> <label for="er_do_cron_month">Yes, Delete log files Older than a Month</label><br />
+
+<input id="er_do_cron_week" name="er_do_cron" type="radio" value='week' <?php if ($mitt_er_do_cron_del == 'week') {echo 'checked="checked"';} ?> /> <label for="er_do_cron_week">Yes, Delete log files Older than a Week</label><br /><br />
+
+		<p class="submit">
+			<input type="submit" name="mitt_sched_cron" value="<?php _e('Schedule Auto Delete') ?>" class="button" />
+		</p>
+			</form>
+		</div>
+	</div>
 
 <!-- /* CONFIGURATION SECTION */ -->
 	<h3>Configuration</h3>
@@ -1387,6 +1516,9 @@ The two are not compatible and both can not be activated at the same time.</li>
 Depending on where an error occurs, it will be logged to a er-logs folder that's either under the blog's installation folder, or under the wp-admin folder. New files are created for each day with names having the format "ER-dd-Mmm-yyyy.log"<br />
 eg. ER-05-Mar-2007.log</li>
 
+	<li><span class="er_pi_head">Auto Delete Old Log Files</span><br />
+The auto delete uses core WordPress CRON and as such is not real CRON but occurs when your blog is visited. Once per day the auto delete can remove files older than one week - 7 days, or one month - 31 days. So depending on your blog's activity, there may be some slight imprecision, but in general using the auto delete will prevent the error log folders from becoming bloated.</li>
+
 	<li><span class="er_pi_head">Email Error Reporting</span><br />
 Email Error Reporting does not have a "no repeat errors" setting. This means that the blog administrator's email address will get an email for every reported error, every time.<br />
 For example, while testing this plugin using the default settings, 10 failed pings generated 190+ emails. It is strongly suggested that you "fine tune" your options using Log Error Reporting first (with the Repeat Error option set to yes to get an accurate indication of how many emails would have been sent) and get the errors down to a manageable amount before experimenting with the Email Error Reporting settings.<br />
@@ -1431,7 +1563,7 @@ With all the possible option setting configurations, it's impossible to show exa
 This plugin has been tested to ensure that representative settings work as expected, but with approximately 4,420 different configurations, who knows? If you find a problem with any please let me know.</p>
 	<p>For more information, the latest version, etc. please visit <a href='http://www.mittineague.com/dev/er.php'>http://www.mittineague.com/dev/er.php</a></p>
 	<p>Questions? For support, please visit <a href='http://www.mittineague.com/forums/viewtopic.php?t=100'>http://www.mittineague.com/forums/viewtopic.php?t=100</a> (registration required to post)</p>
-	<p>For comments / suggestions, please visit <a href='http://www.mittineague.com/blog/2007/03/error-reporting-plugin/'>http://www.mittineague.com/blog/2007/03/error-reporting-plugin/</a></p>
+	<p>For comments / suggestions, please visit <a href='http://www.mittineague.com/blog/2010/02/error-reporting-plugin-release-candidate/'>http://www.mittineague.com/blog/2010/02/error-reporting-plugin-release-candidate/</a></p>
 	</div>
 <?php
 }
@@ -1710,7 +1842,7 @@ if ( ($code == '2') && ( strpos($msg, 'fsockopen') !== FALSE ) && ( strpos($msg,
 	
 			if ( !$handle = fopen($mitt_path_file, 'a+') )
 			{
-						return; // silently fail
+						return true; // silently fail, pass error along
 			}
 			else
 			{
@@ -1722,7 +1854,7 @@ if ( ($code == '2') && ( strpos($msg, 'fsockopen') !== FALSE ) && ( strpos($msg,
 					if (!is_writable($mitt_path_file))
 						chmod($mitt_path_file, 0606);
 					if ( fwrite($handle, $info) === FALSE )
-						return; // silently fail
+						return true; // silently fail, pass error along
 				}
 			chmod($mitt_wp_logfoldername, 0700);
 			chmod($mitt_path_file, 0600);
@@ -1888,11 +2020,13 @@ if ( ($code == '2') && ( strpos($msg, 'fsockopen') !== FALSE ) && ( strpos($msg,
 		}
 	}
 	if ( (function_exists('date_default_timezone_set')) && ($serv_tz != 'This_option_requires_PHP_ver5+') ) date_default_timezone_set($serv_tz);
-	return false;
+	return true; // pass error along
 }
 
 function mitt_err_handler()
 {
+	error_reporting(0);
+	ini_set('display_errors', FALSE);
 	set_error_handler('mitt_err_options');
 }
 
@@ -1902,6 +2036,7 @@ if (function_exists('add_action'))
 	add_action('admin_init', 'mitt_er_admin_init');
 	add_action('admin_menu', 'mitt_add_er_page');
 	add_action('wp_dashboard_setup', 'add_er_dashboard_widget');
+	add_action('er_cron_del_hook', 'er_cron_delete_logs');
 }
 
 if (function_exists('register_activation_hook'))

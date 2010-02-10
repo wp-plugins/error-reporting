@@ -2,13 +2,18 @@
 Contributors: Mittineague  
 Tags: error reporting, log errors, email errors, ping errors  
 Requires at least: unknown  
-Tested up to: 2.8.4  
+Tested up to: 2.9.1  
 Stable tag: Trunk  
 
 == License ==  
 Released under the terms of the GNU General Public License.  
 
 == Changelog ==  
+
+= 1.0.0 RC 09-Feb-2010 =  
+* replaced deprecated user_role  
+* auto delete old log files feature  
+* minor tweaks  
 
 = Beta 0.10.1 13-Aug-2009 =  
 * skip SimplePie errors for now  
@@ -84,6 +89,9 @@ The two are not compatible and both can not be activated at the same time.
 Log Error Reporting  
 Depending on where an error occurs, it will be logged to a wp-logs folder that's either under the blog's installation folder, or under the wp-admin folder. New files are created for each day with names having the format "ER-dd-Mmm-yyyy.log"  
 eg. ER-13-Aug-2009.log  
+
+Auto Delete Old Log Files  
+The auto delete uses core WordPress CRON and as such is not real CRON but occurs when your blog is visited. Once per day the auto delete can remove files older than one week - 7 days, or one month - 31 days. So depending on your blog's activity, there may be some slight imprecision, but in general using the auto delete will prevent the error log folders from becoming bloated.  
 
 Email Error Reporting  
 Email Error Reporting does not have a "no repeat errors" setting. This means that the blog administrator's email address will get an email for every reported error, every time.  
@@ -168,7 +176,7 @@ For support, please visit the forum (registration required to post)
 [Support](http://www.mittineague.com/forums/viewtopic.php?t=100)  
 
 For comments / suggestions, please visit the blog  
-[Comments / Suggestions](http://www.mittineague.com/blog/2007/03/error-reporting-plugin/)  
+[Comments / Suggestions](http://www.mittineague.com/blog/2010/02/error-reporting-plugin-release-candidate/)  
 
 ***********************
 ** AN IMPORTANT NOTE **
